@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unidossis - Gestión de PQRS</title>
+    <!-- Google Fonts for modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-container" style="display:flex; justify-content:space-between; align-items:center; padding: 0 20px; margin-bottom:20px;">
+                <img src="LOGOSVG.svg" alt="Logo Unidossis" class="brand-logo" style="width: 140px;">
+                <button id="sidebarToggle" title="Contraer Menú">
+                    <i class="fa-solid fa-bars fa-lg"></i>
+                </button>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active">
+                    <i class="fa-solid fa-inbox"></i>
+                    <span>Toda la Bandeja</span>
+                    <span class="badge">15</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Casos Abiertos</span>
+                    <span class="badge danger">4</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    <span>En Revisión</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-check-double"></i>
+                    <span>Casos Resueltos</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fa-solid fa-ban"></i>
+                    <span>Spam / Cancelados</span>
+                </a>
+
+                <hr style="border:0; border-top:1px solid rgba(0,0,0,0.05); margin:15px 0;">
+                <div class="sidebar-title" style="padding:0 16px; margin-bottom:10px; font-size:11px; text-transform:uppercase; color:#9CA3AF; letter-spacing:1px; font-weight:600;">Panel de Indicadores</div>
+                
+                <a href="#" id="viewKpiBtn" class="nav-item">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Ver KPIs y SLA</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer" style="margin-top:auto;">
+                <a href="#" id="configBtn" class="nav-item">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Configuración</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                <div style="display:flex; align-items:center; gap:20px;">
+                    <img src="LOGOSVG.svg" alt="Unidossis" style="height: 28px; border-right: 1px solid #E5E7EB; padding-right: 20px;">
+                    <div class="search-bar" style="background:#f3f4f6; border-radius:20px; padding:8px 15px; display:flex; align-items:center; gap:10px; margin:0;">
+                        <i class="fa-solid fa-magnifying-glass search-icon" style="color:gray;"></i>
+                        <input type="text" placeholder="Buscar por ID, cliente o asunto..." style="border:none; background:transparent; outline:none; width: 300px;">
+                    </div>
+                </div>
+                <div class="user-profile" id="userProfileBtn" style="display:flex; align-items:center; gap:10px; cursor:pointer;" title="Ver Perfil">
+                    <span class="status-indicator online"></span>
+                    <i class="fa-solid fa-circle-user avatar" style="font-size:24px; color:var(--primary-color);"></i>
+                    <span class="user-name" style="font-weight:600;">Admin Unidossis</span>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <!-- PANEL DE INDICADORES -->
+                <div id="kpiPanelRight" style="display:none; margin-bottom:30px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h2 style="font-weight: 600; color: #1f2937;">Panel de Inteligencia Analítica <small style="font-size:14px; color:gray;">(Preview)</small></h2>
+                        <button id="closeKpiBtn" class="btn btn-primary">Cerrar y ver Tabla</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                        <div style="background:white; padding:20px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="color:#6B7280; font-size:12px;">Total Solicitudes</div>
+                            <div style="font-size:28px; font-weight:700;">124</div>
+                        </div>
+                        <div style="background:white; padding:20px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #059669;">
+                            <div style="color:#6B7280; font-size:12px;">% Cumplimiento</div>
+                            <div style="font-size:28px; font-weight:700; color: #059669;">88%</div>
+                        </div>
+                        <div style="background:white; padding:20px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #EAB308;">
+                            <div style="color:#6B7280; font-size:12px;">Requieren Atención</div>
+                            <div style="font-size:28px; font-weight:700; color: #EAB308;">12</div>
+                        </div>
+                        <div style="background:white; padding:20px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #DC2626;">
+                            <div style="color:#6B7280; font-size:12px;">Casos Vencidos</div>
+                            <div style="font-size:28px; font-weight:700; color: #DC2626;">3</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla Principal -->
+                <div class="header-section" id="tableHeader">
+                    <h1>Casos Abiertos (PQRS)</h1>
+                    <button class="btn btn-primary"><i class="fa-solid fa-rotate-right"></i> Sincronizar Correo</button>
+                </div>
+
+                <div class="table-container" id="mainTableRight">
+                    <table class="pqrs-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 10%;">ID Caso</th>
+                                <th style="width: 22%;">Cliente</th>
+                                <th style="width: 15%;">Tipificación</th>
+                                <th style="width: 13%;">Responsable</th>
+                                <th style="width: 20%;">Asunto</th>
+                                <th style="width: 12%;">SLA</th>
+                                <th style="width: 8%;">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <tr style="border-left: 5px solid #DC2626;">
+                                <td class="ticket-id">#PQRS-1029</td>
+                                <td>
+                                    <div class="client-info">
+                                        <div class="client-avatar">JC</div>
+                                        <div class="client-details">
+                                            <span class="client-name">Juan Cliente</span>
+                                            <span class="client-email" style="font-size:10px; color:var(--primary-color); font-weight:600;">INSTITUTO SALUD</span>
+                                            <span class="client-email">juan.cliente@internet.com</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-weight:bold; font-size:12px;">Farma / Pedidos</div>
+                                    <div style="font-size:10px; color:red; font-weight:700;">QUEJA</div>
+                                </td>
+                                <td>Admin Central</td>
+                                <td class="subject-cell">
+                                    <span class="subject">Mi pedido no ha llegado</span>
+                                </td>
+                                <td>16 días (Vencido)</td>
+                                <td><span class="status-badge status-pending">Abierto</span></td>
+                            </tr>
+                            <tr style="border-left: 5px solid #059669;">
+                                <td class="ticket-id">#PQRS-1028</td>
+                                <td>
+                                    <div class="client-info">
+                                        <div class="client-avatar bg-purple">AM</div>
+                                        <div class="client-details">
+                                            <span class="client-name">Ana Martínez</span>
+                                            <span class="client-email" style="font-size:10px; color:var(--primary-color); font-weight:600;">CLÍNICA CENTRAL</span>
+                                            <span class="client-email">ana.m@empresa.com</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-weight:bold; font-size:12px;">Suministros</div>
+                                    <div style="font-size:10px; color:blue; font-weight:700;">PETICIÓN</div>
+                                </td>
+                                <td>Soporte Logístico</td>
+                                <td class="subject-cell">
+                                    <span class="subject">Solicitud de factura</span>
+                                </td>
+                                <td>2 días (A tiempo)</td>
+                                <td><span class="status-badge status-review">En Revisión</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Chat Burbuja Flotante (AI Copilot) -->
+            <div id="aiChatWrapper" style="position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end;">
+                <!-- Ventana de Chat -->
+                <div id="aiChatWindow" style="display: none; width: 350px; height: 500px; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); flex-direction: column; margin-bottom: 15px; overflow: hidden; border: 1px solid #E2E8F0;">
+                    <div style="background: #1e3a8a; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 24px; height: 24px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                <div style="width: 18px; height: 18px; background-image: url('LOGOSVG.svg'); background-size: 280% auto; background-position: left center; background-repeat: no-repeat;"></div>
+                            </div>
+                            <span style="font-weight: 600; font-size: 14px;">Copiloto Unidossis AI</span>
+                        </div>
+                        <button onclick="toggleAiChat()" style="background: transparent; border: none; color: white; cursor: pointer;">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div id="aiChatContent" style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #F8FAFC;">
+                        <div style="background: white; padding: 10px 14px; border-radius: 12px 12px 12px 0; border: 1px solid #E2E8F0; max-width: 85%; align-self: flex-start; font-size: 13px;">
+                            ¡Hola! Soy tu asistente analítico de Unidossis. ¿En qué puedo ayudarte hoy? (Vista Previa Estática)
+                        </div>
+                    </div>
+                    <div style="padding: 15px; background: white; border-top: 1px solid #E2E8F0; display: flex; gap: 8px;">
+                        <input type="text" id="aiChatMessage" placeholder="Pregúntame algo..." style="flex: 1; border: 1px solid #E2E8F0; border-radius: 20px; padding: 8px 15px; outline: none; font-size: 13px;">
+                        <button style="background: #1e3a8a; color: white; border: none; border-radius: 50%; width: 35px; height: 35px; cursor: pointer;">
+                            <i class="fa-solid fa-paper-plane" style="font-size: 12px;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botón Burbuja -->
+                <button onclick="toggleAiChat()" id="aiChatBubble" style="background: #1e3a8a; border: none; border-radius: 50%; width: 60px; height: 60px; box-shadow: 0 5px 25px rgba(0,0,0,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); overflow: hidden; border: 2px solid #ffffff;">
+                    <div style="width: 45px; height: 45px; background-image: url('LOGOSVG.svg'); background-size: 280% auto; background-position: left center; background-repeat: no-repeat; filter: brightness(0) invert(1);"></div>
+                </button>
+            </div>
+        </main>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

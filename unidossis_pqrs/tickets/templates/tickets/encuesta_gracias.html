@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gracias por su respuesta | UNIDOSSIS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Plus Jakarta Sans',sans-serif; background:#f0f9ff; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+        .card { background:white; border-radius:28px; padding:56px 40px; max-width:500px; width:100%; text-align:center; box-shadow:0 20px 60px rgba(16,185,129,0.1); }
+        {% if satisfecho %}
+        .icon-circle { width:90px; height:90px; border-radius:50%; background:#d1fae5; display:flex; align-items:center; justify-content:center; font-size:44px; margin:0 auto 24px; }
+        h1 { color:#065f46; font-size:26px; font-weight:800; margin-bottom:10px; }
+        .subtitle { color:#6ee7b7; font-size:15px; font-weight:600; margin-bottom:20px; }
+        {% else %}
+        .icon-circle { width:90px; height:90px; border-radius:50%; background:#fee2e2; display:flex; align-items:center; justify-content:center; font-size:44px; margin:0 auto 24px; }
+        h1 { color:#b91c1c; font-size:26px; font-weight:800; margin-bottom:10px; }
+        .subtitle { color:#f87171; font-size:15px; font-weight:600; margin-bottom:20px; }
+        {% endif %}
+        p { color:#64748b; font-size:14px; line-height:1.7; }
+        .logo { height:36px; margin-top:24px; opacity:0.6; }
+    </style>
+</head>
+<body>
+<div class="card">
+    {% if satisfecho %}
+    <div class="icon-circle">✅</div>
+    <h1>¡Gracias por su calificación!</h1>
+    <p class="subtitle">{{ encuesta.puntuacion }}/5 estrellas — El caso ha sido cerrado exitosamente.</p>
+    <p>Nos alegra que hayamos podido atender su solicitud de manera satisfactoria. Su opinión es muy valiosa para seguir mejorando.</p>
+    {% else %}
+    <div class="icon-circle">⚠️</div>
+    <h1>Entendemos su inconformidad</h1>
+    <p class="subtitle">Su caso ha sido reabierto automáticamente.</p>
+    <p>Lamentamos no haber cumplido sus expectativas. Nuestro equipo ha sido notificado y le contactará a la brevedad para resolver su caso.</p>
+    {% endif %}
+    <img src="{% static 'tickets/img/LOGOSVG.svg' %}" alt="UNIDOSSIS" class="logo">
+</div>
+</body>
+</html>

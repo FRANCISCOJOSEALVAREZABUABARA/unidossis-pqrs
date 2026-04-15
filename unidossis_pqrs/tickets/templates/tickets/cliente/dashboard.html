@@ -1,0 +1,84 @@
+{% extends "tickets/base_cliente.html" %}
+{% load static %}
+
+{% block title %}Portal Institucional | UNIDOSSIS{% endblock %}
+
+
+{% block content %}
+    <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+        <div>
+            <h1 style="font-size:24px; font-weight:800;">¡Hola, {{ cliente.nombre }}!</h1>
+            <p style="color:var(--text-muted); font-size:14px;">Bienvenido a su centro de atención de PQRS de UNIDOSSIS.</p>
+        </div>
+        <a href="{% url 'public_portal' %}" style="background:var(--accent); color:white; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700; display:flex; align-items:center; gap:10px; box-shadow:0 4px 12px rgba(59,130,246,0.3); transition:all 0.2s;">
+            <i class="fa-solid fa-plus"></i> Radicar Nueva PQRS
+        </a>
+    </header>
+
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-label">Total Radicadas</div>
+            <div class="stat-value">{{ tickets.count }}</div>
+        </div>
+        <div class="stat-card stat-danger">
+            <div class="stat-label">En Proceso</div>
+            <div class="stat-value" style="color: var(--danger);">{{ tickets_en_proceso|default:0 }}</div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-header">
+            <h2><i class="fa-solid fa-list-check"></i> Historial de Solicitudes</h2>
+            <span class="table-badge">{{ tickets.count }} registro{{ tickets.count|pluralize:'s' }}</span>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:160px;">Radicado</th>
+                    <th style="width:110px;">Fecha</th>
+                    <th>Asunto</th>
+                    <th style="width:130px;">Estado</th>
+                    <th style="width:110px; text-align:center;">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr class="row-hover" onclick="window.location='{% url 'ticket_detail' ticket.ticket_id %}'">
+                    <td>
+                        <span class="ticket-num">
+                            <i class="fa-solid fa-hashtag"></i>
+                            {{ ticket.ticket_id }}
+                        </span>
+                    </td>
+                    <td style="color: var(--text-muted); font-size:13px;">
+                        <i class="fa-regular fa-calendar" style="margin-right:5px; font-size:11px;"></i>
+                        {{ ticket.fecha_ingreso|date:"d/m/Y" }}
+                    </td>
+                    <td style="font-weight: 500; max-width:300px;">
+                        <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:280px;">
+                            {{ ticket.asunto }}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-pill status-{{ ticket.estado }}">
+                            {{ ticket.get_estado_display }}
+                        </span>
+                    </td>
+                    <td style="text-align:center;" onclick="event.stopPropagation();">
+                        <a href="{% url 'ticket_detail' ticket.ticket_id %}" class="btn-detail">
+                            Ver <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <i class="fa-solid fa-inbox"></i>
+                        <p>Aún no ha radicado ninguna solicitud.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

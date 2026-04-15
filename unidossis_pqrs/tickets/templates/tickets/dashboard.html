@@ -1,0 +1,597 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+
+{% block title %}Dashboard PQRS | UNIDOSSIS{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── BENTO ANALYTICS GRID ── */
+    .bento-grid { display:grid; grid-template-columns:repeat(4, 1fr); grid-template-rows:auto auto; gap:16px; margin-bottom:24px; }
+    .bento-card { background:white; border-radius:20px; padding:22px 24px; border:1px solid rgba(30,58,138,0.08); transition:all 0.3s cubic-bezier(0.4,0,0.2,1); position:relative; overflow:hidden; }
+    .bento-card:hover { transform:translateY(-3px); box-shadow:0 12px 30px rgba(0,0,0,0.06); border-color:rgba(30,58,138,0.2); }
+    .bento-card .bento-icon { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:18px; margin-bottom:14px; }
+    .bento-card .bento-value { font-size:34px; font-weight:800; letter-spacing:-1.5px; line-height:1; }
+    .bento-card .bento-label { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
+    .bento-card .bento-sub { font-size:11px; color:var(--text-faint); margin-top:8px; display:flex; align-items:center; gap:5px; }
+    .bento-card .bento-sub .trend-up { color:var(--success); }
+    .bento-card .bento-sub .trend-down { color:var(--danger); }
+
+    /* SLA Health Ring */
+    .sla-ring-card { grid-column:span 2; display:flex; align-items:center; gap:28px; padding:24px 32px; }
+    .sla-ring-wrap { position:relative; width:120px; height:120px; flex-shrink:0; }
+    .sla-ring-wrap svg { transform:rotate(-90deg); }
+    .sla-ring-wrap .ring-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .sla-ring-wrap .ring-pct { font-size:28px; font-weight:800; letter-spacing:-1px; }
+    .sla-ring-wrap .ring-label { font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase; }
+    .sla-bars { flex:1; display:flex; flex-direction:column; gap:10px; }
+    .sla-bar-row { display:flex; align-items:center; gap:10px; }
+    .sla-bar-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .sla-bar-info { flex:1; }
+    .sla-bar-name { font-size:12px; font-weight:600; color:var(--text-main); }
+    .sla-bar-track { height:6px; background:#f1f5f9; border-radius:10px; overflow:hidden; margin-top:3px; }
+    .sla-bar-fill { height:100%; border-radius:10px; transition:width 1s ease; }
+    .sla-bar-count { font-size:13px; font-weight:800; min-width:28px; text-align:right; }
+
+    /* Filters */
+    .filter-strip { display:flex; align-items:center; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+    .filter-chip { padding:8px 16px; border-radius:10px; font-size:12.5px; font-weight:600; border:1.5px solid var(--border); background:white; color:var(--text-muted); transition:all 0.2s; display:flex; align-items:center; gap:7px; cursor:pointer; }
+    .filter-chip:hover { border-color:var(--accent); color:var(--accent); }
+    .filter-chip.active { background:var(--accent); color:white; border-color:var(--accent); box-shadow:0 4px 12px rgba(59,130,246,0.25); }
+    .filter-chip .chip-count { background:rgba(255,255,255,0.2); padding:1px 7px; border-radius:6px; font-size:11px; font-weight:700; }
+    .filter-chip.active .chip-count { background:rgba(255,255,255,0.25); }
+    .filter-chip:not(.active) .chip-count { background:var(--bg); color:var(--text-muted); }
+
+    /* Greeting */
+    .greeting { margin-bottom:24px; }
+    .greeting h1 { font-size:22px; font-weight:800; color:var(--primary); letter-spacing:-0.5px; }
+    .greeting h1 span { color:var(--accent); }
+    .greeting p { font-size:13px; color:var(--text-muted); margin-top:4px; }
+
+    /* Fix para TomSelect integrado en el UI Light Premium */
+    .ts-control { border-radius: 10px !important; border: 1px solid var(--border) !important; padding: 8px 12px !important; font-size: 12.5px !important; font-weight: 600 !important; color: var(--text-main) !important; min-height: 38px !important; }
+    .ts-dropdown { border-radius: 10px !important; border: 1px solid var(--border) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important; font-size: 12px !important; font-weight: 500 !important; }
+
+    @media(max-width:1200px) { .bento-grid { grid-template-columns:1fr 1fr; } .sla-ring-card { grid-column:span 2; } }
+    @media(max-width:768px) { .bento-grid { grid-template-columns:1fr; } .sla-ring-card { grid-column:span 1; flex-direction:column; align-items:flex-start; } .filter-strip { gap:6px; } }
+</style>
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+    <!-- Greeting -->
+    <div class="greeting">
+        <h1>Buenos días, <span>{{ request.user.first_name|default:request.user.username }}</span> 👋</h1>
+        <p>{{ perfil.get_rol_display }} — Panel de control PQRS en tiempo real</p>
+    </div>
+
+    <!-- ═══════ BENTO ANALYTICS GRID ═══════ -->
+    <div id="kpiPanelRight" style="display:none; margin-bottom:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+            <h2 style="font-weight:800; color:var(--primary); font-size:18px; margin:0;">Inteligencia Analítica <small style="font-size:13px; color:var(--text-muted); font-weight:600;">(KPI / SLA)</small></h2>
+            <div style="display:flex; gap:12px; align-items:center;">
+                <!-- Filter form -->
+                <form method="GET" style="display:flex; align-items:center; gap:8px;">
+                    <!-- Maintain existing filters -->
+                    {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+                    {% if filtro_actual %}<input type="hidden" name="estado" value="{{ filtro_actual }}">{% endif %}
+                    
+                    <div style="min-width: 320px;">
+                        <select id="kpi-client-select" name="cliente_id" placeholder="Buscar cliente..." onchange="this.form.submit()">
+                            <option value="">🏢 Todos los Clientes</option>
+                            {% for cliente in clientes_disponibles %}
+                                <option value="{{ cliente.id }}" {% if cliente.id|stringformat:"s" == cliente_id_selected|stringformat:"s" %}selected{% endif %}>
+                                    {{ cliente.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+
+                {% if cliente_id_selected %}
+                <a href="?{% if search_query %}q={{search_query}}&{% endif %}{% if filtro_actual %}estado={{filtro_actual}}&{% endif %}view=kpi" class="filter-chip" style="background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; margin:0;" title="Limpiar filtro de cliente">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+                {% endif %}
+
+                <button id="closeKpiBtn" class="filter-chip" style="background:white; border:1px solid var(--border); margin:0;"><i class="fa-solid fa-table"></i> Cerrar y ver Tabla</button>
+            </div>
+        </div>
+        <div class="bento-grid">
+        <!-- Card 1: Total -->
+        <div class="bento-card">
+            <div class="bento-icon" style="background:#eff6ff; color:var(--accent);"><i class="fa-solid fa-layer-group"></i></div>
+            <div class="bento-label">Total Solicitudes</div>
+            <div class="bento-value" style="color:var(--primary);">{{ cantidad_total }}</div>
+            <div class="bento-sub">
+                {% if tickets_hoy > 0 %}
+                <span class="trend-up"><i class="fa-solid fa-arrow-up"></i></span> {{ tickets_hoy }} nueva{{ tickets_hoy|pluralize:"s" }} hoy
+                {% else %}
+                <i class="fa-regular fa-calendar"></i> Sin nuevas hoy
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Card 2: Activos -->
+        <div class="bento-card">
+            <div class="bento-icon" style="background:#fef3c7; color:#d97706;"><i class="fa-solid fa-fire"></i></div>
+            <div class="bento-label">Casos Activos</div>
+            <div class="bento-value" style="color:#d97706;">{{ cantidad_urgentes }}</div>
+            <div class="bento-sub"><i class="fa-solid fa-clock"></i> Pendientes de resolución</div>
+        </div>
+
+        <!-- Card 3: Resueltos -->
+        <div class="bento-card">
+            <div class="bento-icon" style="background:#d1fae5; color:#059669;"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="bento-label">Resueltos</div>
+            <div class="bento-value" style="color:#059669;">{{ total_cerrados }}</div>
+            <div class="bento-sub"><span class="trend-up"><i class="fa-solid fa-chart-line"></i></span> {{ cumplimiento }}% cumplimiento</div>
+        </div>
+
+        <!-- Card 4: Vencidos SLA -->
+        <div class="bento-card" style="border-left:3px solid var(--danger);">
+            <div class="bento-icon" style="background:#fee2e2; color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="bento-label">Vencidos SLA</div>
+            <div class="bento-value" style="color:#dc2626;">{{ vencidas }}</div>
+            <div class="bento-sub"><span class="trend-down"><i class="fa-solid fa-bolt"></i></span> Requieren escalamiento</div>
+        </div>
+
+        <!-- Card 5: SLA Health Ring (spans 2 cols) -->
+        <div class="bento-card sla-ring-card">
+            <div class="sla-ring-wrap">
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="#f1f5f9" stroke-width="10"/>
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="{% if sla_health >= 70 %}#10b981{% elif sla_health >= 40 %}#f59e0b{% else %}#ef4444{% endif %}" stroke-width="10" stroke-linecap="round"
+                            stroke-dasharray="{{ sla_health|floatformat:0 }}% 327" stroke-dashoffset="0"
+                            style="stroke-dasharray: calc({{ sla_health }} * 3.267) calc(326.7 - {{ sla_health }} * 3.267); transition: stroke-dasharray 1.5s ease;"/>
+                </svg>
+                <div class="ring-center">
+                    <div class="ring-pct" style="color:{% if sla_health >= 70 %}var(--success){% elif sla_health >= 40 %}var(--warning){% else %}var(--danger){% endif %};">{{ sla_health }}%</div>
+                    <div class="ring-label">SLA Health</div>
+                </div>
+            </div>
+            <div class="sla-bars">
+                <div style="font-size:14px; font-weight:800; color:var(--primary); margin-bottom:6px;"><i class="fa-solid fa-shield-halved" style="color:var(--accent); margin-right:6px;"></i>Estado del SLA</div>
+                <div class="sla-bar-row">
+                    <div class="sla-bar-dot" style="background:#10b981;"></div>
+                    <div class="sla-bar-info">
+                        <div class="sla-bar-name">En tiempo</div>
+                        <div class="sla-bar-track"><div class="sla-bar-fill" style="width:{% widthratio bien cantidad_urgentes 100 %}%; background:#10b981;"></div></div>
+                    </div>
+                    <div class="sla-bar-count" style="color:#059669;">{{ bien }}</div>
+                </div>
+                <div class="sla-bar-row">
+                    <div class="sla-bar-dot" style="background:#f59e0b;"></div>
+                    <div class="sla-bar-info">
+                        <div class="sla-bar-name">En peligro</div>
+                        <div class="sla-bar-track"><div class="sla-bar-fill" style="width:{% widthratio peligro cantidad_urgentes 100 %}%; background:#f59e0b;"></div></div>
+                    </div>
+                    <div class="sla-bar-count" style="color:#d97706;">{{ peligro }}</div>
+                </div>
+                <div class="sla-bar-row">
+                    <div class="sla-bar-dot" style="background:#ef4444;"></div>
+                    <div class="sla-bar-info">
+                        <div class="sla-bar-name">Vencidos</div>
+                        <div class="sla-bar-track"><div class="sla-bar-fill" style="width:{% widthratio vencidas cantidad_urgentes 100 %}%; background:#ef4444;"></div></div>
+                    </div>
+                    <div class="sla-bar-count" style="color:#dc2626;">{{ vencidas }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 6: Distribution Snapshot (spans 2 cols) -->
+        <div class="bento-card sla-ring-card">
+            <div class="sla-ring-wrap">
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="#f1f5f9" stroke-width="10"/>
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round"
+                            style="stroke-dasharray: calc({{ cumplimiento }} * 3.267) calc(326.7 - {{ cumplimiento }} * 3.267); transition: stroke-dasharray 1.5s ease;"/>
+                </svg>
+                <div class="ring-center">
+                    <div class="ring-pct" style="color:var(--accent);">{{ cumplimiento }}%</div>
+                    <div class="ring-label">Resueltos</div>
+                </div>
+            </div>
+            <div class="sla-bars">
+                <div style="font-size:14px; font-weight:800; color:var(--primary); margin-bottom:6px;"><i class="fa-solid fa-chart-pie" style="color:var(--accent); margin-right:6px;"></i>Distribución de Estados</div>
+                <div class="sla-bar-row">
+                    <div class="sla-bar-dot" style="background:var(--danger);"></div>
+                    <div class="sla-bar-info">
+                        <div class="sla-bar-name">Abiertos</div>
+                        <div class="sla-bar-track"><div class="sla-bar-fill" style="width:{% widthratio cantidad_urgentes cantidad_total 100 %}%; background:var(--danger);"></div></div>
+                    </div>
+                    <div class="sla-bar-count" style="color:var(--danger);">{{ cantidad_urgentes }}</div>
+                </div>
+                <div class="sla-bar-row">
+                    <div class="sla-bar-dot" style="background:var(--warning);"></div>
+                    <div class="sla-bar-info">
+                        <div class="sla-bar-name">En revisión</div>
+                        <div class="sla-bar-track"><div class="sla-bar-fill" style="width:{% widthratio total_revision cantidad_total 100 %}%; background:var(--warning);"></div></div>
+                    </div>
+                    <div class="sla-bar-count" style="color:var(--warning);">{{ total_revision }}</div>
+                </div>
+                <div class="sla-bar-row">
+                    <div class="sla-bar-dot" style="background:var(--success);"></div>
+                    <div class="sla-bar-info">
+                        <div class="sla-bar-name">Resueltos</div>
+                        <div class="sla-bar-track"><div class="sla-bar-fill" style="width:{% widthratio total_cerrados cantidad_total 100 %}%; background:var(--success);"></div></div>
+                    </div>
+                    <div class="sla-bar-count" style="color:var(--success);">{{ total_cerrados }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 7: Top Regionales (spans 2 cols) -->
+        <div class="bento-card" style="grid-column: span 2;">
+            <div style="font-size:14px; font-weight:800; color:var(--primary); margin-bottom:16px;">
+                <i class="fa-solid fa-map-location-dot" style="color:var(--accent); margin-right:6px;"></i>Regionales con más quejas
+            </div>
+            <div class="sla-bars">
+                {% for r in top_regionales %}
+                <div class="sla-bar-row">
+                    <div class="sla-bar-info">
+                        <div class="sla-bar-name" style="display:flex; justify-content:space-between;">
+                            <span>{{ r.nombre|default:"Sin asignar"|truncatechars:20 }}</span>
+                            <span style="font-size:10px; font-weight:700; color:var(--danger);" title="Casos abiertos en esta regional">
+                                {% if r.abiertos > 0 %}{{ r.abiertos }} Abiertos{% else %}0 Abiertos{% endif %}
+                            </span>
+                        </div>
+                        <div class="sla-bar-track">
+                            <div class="sla-bar-fill" style="width:{% if r.porcentaje > 100 %}100{% else %}{{ r.porcentaje }}{% endif %}%; background:var(--accent);"></div>
+                        </div>
+                    </div>
+                    <div class="sla-bar-count" style="color:var(--text-main);">{{ r.total }}</div>
+                </div>
+                {% empty %}
+                <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px;">No hay información disponible</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Card 8: Top Líneas de Servicio (spans 2 cols) -->
+        <div class="bento-card" style="grid-column: span 2;">
+            <div style="font-size:14px; font-weight:800; color:var(--primary); margin-bottom:16px;">
+                <i class="fa-solid fa-layer-group" style="color:var(--purple); margin-right:6px;"></i>Top Líneas Afectadas
+            </div>
+            <div class="sla-bars">
+                {% for l in top_lineas %}
+                <div class="sla-bar-row">
+                    <div class="sla-bar-info">
+                        <div class="sla-bar-name">{{ l.nombre|default:"Sin asignar"|truncatechars:25 }}</div>
+                        <div class="sla-bar-track">
+                            <div class="sla-bar-fill" style="width:{% if l.porcentaje > 100 %}100{% else %}{{ l.porcentaje }}{% endif %}%; background:var(--purple);"></div>
+                        </div>
+                    </div>
+                    <div class="sla-bar-count" style="color:var(--text-main);">{{ l.total }}</div>
+                </div>
+                {% empty %}
+                <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px;">No hay información disponible</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- ═══════ FILTER STRIP ═══════ -->
+    <div class="filter-strip">
+        <a href="{% url 'dashboard' %}" class="filter-chip {% if not filtro_actual %}active{% endif %}">
+            <i class="fa-solid fa-inbox"></i> Todos <span class="chip-count">{{ cantidad_total }}</span>
+        </a>
+        <a href="{% url 'dashboard' %}?estado=abierto" class="filter-chip {% if filtro_actual == 'abierto' %}active{% endif %}">
+            <i class="fa-solid fa-circle-exclamation"></i> Abiertos <span class="chip-count">{{ cantidad_urgentes }}</span>
+        </a>
+        <a href="{% url 'dashboard' %}?estado=revision" class="filter-chip {% if filtro_actual == 'revision' %}active{% endif %}">
+            <i class="fa-solid fa-clock"></i> En Revisión <span class="chip-count">{{ total_revision }}</span>
+        </a>
+        <a href="{% url 'dashboard' %}?estado=resuelto" class="filter-chip {% if filtro_actual == 'resuelto' %}active{% endif %}">
+            <i class="fa-solid fa-check-circle"></i> Resueltos <span class="chip-count">{{ total_cerrados }}</span>
+        </a>
+
+        <button type="button" id="viewKpiBtn" class="filter-chip" style="margin-left:8px; background:var(--primary); color:white; border-color:var(--primary);">
+            <i class="fa-solid fa-chart-pie"></i> Ver KPI / SLA
+        </button>
+
+        <!-- Search -->
+        <form class="search-bar" action="{% url 'dashboard' %}" method="GET" style="margin:0 0 0 auto;">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            {% if filtro_actual %}<input type="hidden" name="estado" value="{{ filtro_actual }}">{% endif %}
+            <input type="text" name="q" value="{{ request.GET.q|default_if_none:'' }}" placeholder="Buscar por ID, cliente o asunto...">
+            <button type="submit" style="display:none;"></button>
+        </form>
+    </div>
+
+    <!-- ═══════ TABLA PRINCIPAL ═══════ -->
+    <div class="table-container" id="mainTable">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fa-solid fa-ticket" style="color:var(--accent);"></i> Listado de Tickets</h3>
+            <span style="font-size:12px; font-weight:600; color:var(--text-muted); background:var(--bg); padding:3px 10px; border-radius:20px;">{{ cantidad_total|default:"0" }} caso{{ cantidad_total|pluralize:"s" }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="pqrs-table">
+                <thead>
+                    <tr>
+                        <th style="width: 7%; padding-left: 10px;">ID Caso</th>
+                        <th style="width: 20%;">Cliente</th>
+                        <th style="width: 12%;">Tipificación / Línea</th>
+                        <th style="width: 8%;">Criticidad</th>
+                        <th style="width: 9%;">Responsable</th>
+                        <th style="width: 18%;">Asunto</th>
+                        <th style="width: 10%;">Fecha y SLA</th>
+                        <th style="width: 8%; text-align: center;">Estado</th>
+                        <th style="width: 5%; text-align: center;">Abrir</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    {% for ticket in tickets %}
+                    {% with sla=ticket.estado_sla %}
+                    <tr style="border-left: 5px solid {% if sla == 'vencido' %}#DC2626{% elif sla == 'peligro' %}#EAB308{% elif sla == 'bien' %}#059669{% else %}#9CA3AF{% endif %};">
+                        <td class="font-medium">{{ ticket.ticket_id }}</td>
+                        <td>
+                            <div class="client-info">
+                                <div class="client-avatar">
+                                    {% if ticket.remitente_nombre %}
+                                        {{ ticket.remitente_nombre|make_list|first|upper }}
+                                    {% else %}
+                                        <i class="fa-solid fa-user"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="client-details">
+                                    <span class="client-name" title="{{ ticket.remitente_nombre|default:'Usuario' }}">{{ ticket.remitente_nombre|default:"Usuario" }}</span>
+                                    <span class="client-email" style="color:var(--accent); font-weight:600;" title="{{ ticket.entidad_cliente|default:ticket.institucion|default:'' }}">
+                                        {{ ticket.entidad_cliente|default:ticket.institucion|default:"" }}
+                                    </span>
+                                    <span class="client-email" title="{{ ticket.remitente_email }}">{{ ticket.remitente_email }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-weight:bold; font-size:12px;">{{ ticket.get_tipificacion_display|default:"Sin Tipificar" }}</div>
+                            <div style="font-size:11px; color:var(--text-muted);">{{ ticket.get_linea_servicio_display|default:"" }}</div>
+                            <div style="font-size:10px; color:var(--danger); font-weight:700; text-transform:uppercase; margin-top:2px;">
+                                {{ ticket.get_tipo_solicitud_display }}
+                            </div>
+                            {% if ticket.regional %}
+                            <span class="badge" title="{{ ticket.get_regional_display|default:'' }}" style="background-color: var(--accent); color: white; display:inline-block; font-size:10px; margin-top:4px; width: 105px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 3px 6px;">
+                                {{ ticket.get_regional_display|default:"" }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ticket.criticidad == 'critica' %}
+                                <span class="status-badge badge-critica" style="font-size:11px;"><i class="fa-solid fa-circle-exclamation"></i> Crítica</span>
+                            {% elif ticket.criticidad == 'mayor' %}
+                                <span class="status-badge badge-mayor" style="font-size:11px;"><i class="fa-solid fa-triangle-exclamation"></i> Mayor</span>
+                            {% elif ticket.criticidad == 'menor' %}
+                                <span class="status-badge badge-menor" style="font-size:11px;">Menor</span>
+                            {% elif ticket.criticidad == 'informativa' %}
+                                <span class="status-badge badge-informativa" style="font-size:11px;">Informativa</span>
+                            {% else %}
+                                <span style="font-size:11px; color:var(--text-faint);">Sin clasificar</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="font-weight:600; color:var(--text-main);">
+                                <i class="fa-solid fa-user-tie" style="color:var(--text-faint); margin-right:5px;"></i>
+                                {{ ticket.responsable|default:"Sin Asignar" }}
+                            </div>
+                        </td>
+                        <td class="subject-cell" title="{{ ticket.asunto|escapejs }}">
+                            <div class="subject-text">
+                                {{ ticket.asunto }}
+                            </div>
+                            {% if ticket.archivos_adjuntos.exists %}
+                            <span style="color:var(--accent); margin-left: 5px;" title="Contiene Evidencias">📎</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>{{ ticket.fecha_ingreso|date:"d M Y" }}</div>
+                            <div style="font-size:11px; font-weight:600; color:{% if sla == 'vencido' %}var(--danger){% elif sla == 'peligro' %}var(--warning){% elif sla == 'bien' %}var(--success){% else %}var(--text-faint){% endif %};">
+                                {{ ticket.dias_transcurridos }} días transcurridos
+                            </div>
+                        </td>
+                        <td style="text-align: center;">
+                            {% if ticket.estado == 'abierto' %}
+                                <span class="status-badge status-pending">Abierto</span>
+                            {% elif ticket.estado == 'revision' %}
+                                <span class="status-badge status-review">En Revisión</span>
+                            {% elif ticket.estado == 'cancelado' %}
+                                <span class="status-badge status-cancelado">Cancelado</span>
+                            {% else %}
+                                <span class="status-badge status-resolved">Resuelto</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center; padding-right: 15px;">
+                            <a href="{% url 'ticket_detail' ticket.ticket_id %}" style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 42px; height: 42px; background: #EEF2FF; color: #4338CA; border-radius: 12px; text-decoration: none; transition: all 0.2s ease; box-shadow: inset 0 0 0 1px rgba(67, 56, 202, 0.1);" onmouseover="this.style.background='#E0E7FF'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 6px -1px rgba(67, 56, 202, 0.1), inset 0 0 0 1px rgba(67, 56, 202, 0.2)';" onmouseout="this.style.background='#EEF2FF'; this.style.transform='none'; this.style.boxShadow='inset 0 0 0 1px rgba(67, 56, 202, 0.1)';" title="Abrir expediente">
+                                <i class="fa-regular fa-folder-open" style="font-size: 15px; margin-bottom: 2px;"></i>
+                                <span style="font-size: 8px; font-weight: 800; letter-spacing: 0.5px;">ABRIR</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" style="text-align:center; padding:40px; color:var(--text-muted);">No hay PQRS registradas en este momento.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Chat Burbuja Flotante (AI Copilot) -->
+    <div class="ai-chat-wrapper">
+        <div class="ai-chat-window" id="aiChatWindow">
+            <div style="background: #1e3a8a; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 24px; height: 24px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        <div style="width: 18px; height: 18px; background-image: url('{% static 'tickets/img/LOGOSVG.svg' %}'); background-size: 280% auto; background-position: left center; background-repeat: no-repeat;"></div>
+                    </div>
+                    <span style="font-weight: 600; font-size: 14px;">UNIDOSSIS IA</span>
+                </div>
+                <button onclick="toggleAiChat()" style="background: transparent; border: none; color: white; cursor: pointer;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="aiChatContent" style="flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: var(--bg);">
+                <div style="background: white; padding: 10px 14px; border-radius: 12px 12px 12px 0; border: 1px solid var(--border); max-width: 85%; align-self: flex-start; font-size: 13px;">
+                    ¡Hola! 👋 Soy <b>UNIDOSSIS IA</b>, tu experto en CAPA y PQRS. Estoy aquí para ayudarte a analizar tus casos, identificar patrones y sugerirte las mejores acciones correctivas y preventivas. ¿En qué te puedo apoyar hoy?
+                </div>
+            </div>
+            <div style="padding: 15px; background: white; border-top: 1px solid var(--border); display: flex; gap: 8px;">
+                <input type="text" id="aiChatMessage" placeholder="Ej: ¿Qué CAPA me recomiendas para las quejas recientes?" style="flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 8px 15px; outline: none; font-size: 13px; font-family: inherit;">
+                <button id="sendAiChatBtn" style="background: #1e3a8a; color: white; border: none; border-radius: 50%; width: 35px; height: 35px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa-solid fa-paper-plane" style="font-size: 12px;"></i>
+                </button>
+            </div>
+        </div>
+        <div class="ai-chat-bubble" onclick="toggleAiChat()">
+            <div style="width: 45px; height: 45px; background-image: url('{% static 'tickets/img/LOGOSVG.svg' %}'); background-size: 280% auto; background-position: left center; background-repeat: no-repeat; filter: brightness(0) invert(1);"></div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+    // KPI Panel Toggle
+    const viewKpiBtn = document.getElementById('viewKpiBtn');
+    const closeKpiBtn = document.getElementById('closeKpiBtn');
+    const kpiPanel = document.getElementById('kpiPanelRight');
+    const mainTable = document.getElementById('mainTable');
+
+    if (viewKpiBtn && closeKpiBtn && kpiPanel && mainTable) {
+        viewKpiBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            kpiPanel.style.display = 'block';
+            mainTable.style.display = 'none';
+        });
+
+        closeKpiBtn.addEventListener('click', () => {
+            kpiPanel.style.display = 'none';
+            mainTable.style.display = 'block';
+        });
+
+        // Autopen KPI panel if the page reloaded due to selecting a client in the KPI filter or clearing it
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('cliente_id') || urlParams.get('view') === 'kpi') {
+            kpiPanel.style.display = 'block';
+            mainTable.style.display = 'none';
+        }
+    }
+
+    // Búsqueda en Vivo (AJAX)
+    const searchInput = document.querySelector('input[name="q"]');
+    let debounceTimer;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const icon = document.querySelector('.search-icon');
+        icon.classList.replace('fa-magnifying-glass', 'fa-spinner');
+        icon.classList.add('fa-spin');
+
+        debounceTimer = setTimeout(() => {
+            const url = new URL(window.location.href);
+            url.searchParams.set('q', this.value);
+
+            fetch(url)
+                .then(r => r.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newTbody = doc.querySelector('.pqrs-table tbody').innerHTML;
+                    document.querySelector('.pqrs-table tbody').innerHTML = newTbody;
+                    window.history.replaceState({}, '', url);
+                    icon.classList.replace('fa-spinner', 'fa-magnifying-glass');
+                    icon.classList.remove('fa-spin');
+                });
+        }, 300);
+    });
+
+    // AI CHAT COPILOT
+    function toggleAiChat() {
+        const win = document.getElementById('aiChatWindow');
+        const bubble = document.getElementById('aiChatBubble');
+        if (!win.classList.contains('open')) {
+            win.classList.add('open');
+            if (bubble) bubble.style.transform = 'scale(0) rotate(180deg)';
+        } else {
+            win.classList.remove('open');
+            if (bubble) bubble.style.transform = 'scale(1) rotate(0deg)';
+        }
+    }
+
+    const sendBtn = document.getElementById('sendAiChatBtn');
+    const chatInput = document.getElementById('aiChatMessage');
+    const chatContent = document.getElementById('aiChatContent');
+
+    function appendMessage(text, isUser = false) {
+        const msgDiv = document.createElement('div');
+        msgDiv.style.padding = '10px 14px';
+        msgDiv.style.borderRadius = isUser ? '12px 12px 0 12px' : '12px 12px 12px 0';
+        msgDiv.style.border = '1px solid var(--border)';
+        msgDiv.style.maxWidth = '85%';
+        msgDiv.style.alignSelf = isUser ? 'flex-end' : 'flex-start';
+        msgDiv.style.background = isUser ? 'var(--accent)' : 'white';
+        msgDiv.style.color = isUser ? 'white' : 'var(--text-main)';
+        msgDiv.style.fontSize = '13px';
+        msgDiv.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+        msgDiv.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+        chatContent.appendChild(msgDiv);
+        chatContent.scrollTop = chatContent.scrollHeight;
+    }
+
+    sendBtn.addEventListener('click', async () => {
+        const msg = chatInput.value.trim();
+        if (!msg) return;
+
+        chatInput.value = '';
+        appendMessage(msg, true);
+
+        const loadingDiv = document.createElement('div');
+        loadingDiv.style.alignSelf = 'flex-start';
+        loadingDiv.style.fontSize = '11px';
+        loadingDiv.style.color = 'var(--text-muted)';
+        loadingDiv.id = 'aiLoading';
+        loadingDiv.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Consultando base de datos...';
+        chatContent.appendChild(loadingDiv);
+        chatContent.scrollTop = chatContent.scrollHeight;
+
+        try {
+            const response = await fetch('/api/chat-analitico/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ message: msg })
+            });
+            const data = await response.json();
+            document.getElementById('aiLoading').remove();
+            appendMessage(data.reply || 'Lo siento, no pude procesar tu solicitud ahora mismo.');
+        } catch (error) {
+            document.getElementById('aiLoading').remove();
+            appendMessage('Hubo un error al conectar con el servidor de análisis.');
+        }
+    });
+
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendBtn.click();
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        if (document.getElementById('kpi-client-select')) {
+            new TomSelect('#kpi-client-select', {
+                create: false,
+                sortField: { field: "text", direction: "asc" },
+                placeholder: '🏢 Buscar cliente...',
+                maxOptions: 50,
+                onChange: function() {
+                    // Solo enviar si es una interaccion del usuario
+                    if (this.isFocused) {
+                        this.wrapper.closest('form').submit();
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

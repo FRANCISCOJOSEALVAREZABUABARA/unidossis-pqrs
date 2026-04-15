@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UNIDOSSIS - Admin Dark Mode</title>
+    <link rel="stylesheet" href="shared.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="dark-mode">
+    <aside class="sidebar">
+        <div class="brand">
+            <!-- Ensure white/high contrast logo processing logic or CSS filter -->
+            <img src="../unidossis_pqrs/tickets/static/tickets/img/Logo.svg" alt="UNIDOSSIS Logo" style="filter: brightness(0) invert(1);">
+        </div>
+        <ul class="nav-links">
+            <a href="#" class="nav-item active"><i data-lucide="terminal"></i> Server Logs</a>
+            <a href="#" class="nav-item"><i data-lucide="shield"></i> Security Roles</a>
+            <a href="#" class="nav-item"><i data-lucide="database"></i> System Stats</a>
+        </ul>
+    </aside>
+    <main class="main-content">
+        <header class="topbar">
+            <h3 style="font-weight: 600;">System Superadmin Console</h3>
+            <span class="badge blue">System Healthy</span>
+        </header>
+        <div class="page-content">
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+                <div class="card" style="background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px);">
+                    <h4 style="margin-bottom: 1rem; font-size: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Terminal Output</h4>
+                    <pre style="font-family: monospace; font-size: 0.8rem; color: #10B981;">
+> [2026-04-15 13:30] POST /api/tickets/ 200 OK
+> [2026-04-15 13:31] GET /api/analytics/ 200 OK
+> [2026-04-15 13:31] Worker SLA_check running... completed.
+> [2026-04-15 13:33] WARNING: High memory usage detected on DB host.
+                    </pre>
+                </div>
+                <div class="card">
+                    <h4 style="margin-bottom: 1rem; font-size: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 10px;">Active Sessions</h4>
+                    <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px;">
+                        <li style="display: flex; justify-content: space-between; font-size: 0.85rem;"><span>admin_central</span><span style="color: #60A5FA;">Active</span></li>
+                        <li style="display: flex; justify-content: space-between; font-size: 0.85rem;"><span>director_norte</span><span style="color: #60A5FA;">Active</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,435 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Atención PQRS | UNIDOSSIS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #1e40af;
+            --accent: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-glass: rgba(255, 255, 255, 0.8);
+            --border-glass: rgba(255, 255, 255, 0.3);
+            --shadow-premium: 0 20px 50px rgba(0, 0, 0, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .main-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(30, 58, 138, 0.1);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 900px;
+            box-shadow: var(--shadow-premium);
+            overflow: hidden;
+            animation: fadeIn 0.8s ease-out;
+            position: relative;
+        }
+        .main-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #1e40af, #ef4444);
+            z-index: 10;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header {
+            background: #ffffff;
+            padding: 30px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--primary);
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .brand { display: flex; align-items: center; gap: 15px; }
+        .brand img { height: 35px; }
+        
+        .header-info { text-align: right; }
+        .header-info h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+        .header-info span { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; }
+
+        .client-banner {
+            background: #dcfce7;
+            padding: 12px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #064e3b;
+            font-weight: 600;
+        }
+        .logout-link { color: #dc2626; text-decoration: none; display: flex; align-items: center; gap: 5px; transition: opacity 0.2s; }
+        .logout-link:hover { opacity: 0.7; }
+
+        .form-body { padding: 40px; }
+
+        .section { margin-bottom: 40px; }
+        .section-header { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            margin-bottom: 25px; 
+            color: var(--primary);
+        }
+        .section-header i { 
+            width: 36px; 
+            height: 36px; 
+            background: #eff6ff; 
+            color: var(--accent); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        .section-header h2 { font-size: 18px; font-weight: 700; }
+
+        .input-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 20px; 
+        }
+        .col-span-2 { grid-column: span 2; }
+
+        .field-group { display: flex; flex-direction: column; gap: 8px; }
+        .field-group label { 
+            font-size: 13px; 
+            font-weight: 600; 
+            color: #475569; 
+            margin-left: 4px;
+        }
+
+        .input-wrapper { position: relative; }
+        .input-wrapper i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px 12px 42px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: white;
+            color: #1e293b;
+        }
+        textarea { padding: 15px; }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+
+        input:readonly {
+            background: #f1f5f9;
+            cursor: not-allowed;
+            color: #64748b;
+        }
+
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.5);
+        }
+        .upload-zone:hover {
+            border-color: var(--accent);
+            background: #eff6ff;
+            transform: scale(1.01);
+        }
+        .upload-zone i { font-size: 40px; color: #94a3b8; margin-bottom: 15px; }
+        .upload-zone p { font-size: 14px; font-weight: 600; color: #64748b; }
+        .upload-zone span { font-size: 12px; color: #94a3b8; }
+
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(90deg, #1e40af 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(37, 99, 235, 0.3);
+        }
+        .btn-submit:active { transform: translateY(0); }
+
+        @media (max-width: 768px) {
+            .input-grid { grid-template-columns: 1fr; }
+            .col-span-2 { grid-column: span 1; }
+            .card-header { flex-direction: column; text-align: center; gap: 20px; }
+            .header-info { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-card">
+    <header class="card-header">
+        <div class="brand">
+            <div style="width:180px; height:60px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <img src="{% static 'tickets/img/LOGOSVG.svg' %}" alt="Unidossis" style="height: 45px; width: auto;">
+            </div>
+        </div>
+        <div class="header-info">
+            <h1>Radicación de PQRS</h1>
+            <span>Sistema Inteligente BPE</span>
+        </div>
+    </header>
+
+    {% if error %}
+    <div style="background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; padding: 15px 40px; font-size: 14px; font-weight: 600;">
+        <i class="fa-solid fa-circle-exclamation" style="margin-right: 10px;"></i>
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if perfil_cliente %}
+    <div class="client-banner">
+        <span><i class="fa-solid fa-building-circle-check"></i> Institución: {{ perfil_cliente.nombre }}</span>
+        <a href="{% url 'logout' %}" class="logout-link"><i class="fa-solid fa-power-off"></i> Salir</a>
+    </div>
+    {% endif %}
+
+    <div class="form-body">
+        <form action="{% url 'public_portal' %}" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Sección 1: Perfil -->
+            <div class="section">
+                <div class="section-header">
+                    <i class="fa-solid fa-id-card"></i>
+                    <h2>Información del Solicitante</h2>
+                </div>
+                <div class="input-grid">
+                    <div class="field-group col-span-2">
+                        <label>Institución / Entidad Cliente</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-hospital"></i>
+                            <input type="text" name="institucion" id="input-cliente" 
+                                   placeholder="Escriba 3 letras para buscar su institución..." 
+                                   list="lista-clientes" autocomplete="off" 
+                                   value="{% if perfil_cliente %}{{ perfil_cliente.nombre }}{% endif %}" 
+                                   required {% if perfil_cliente %}readonly{% endif %}>
+                            <datalist id="lista-clientes"></datalist>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Ciudad / Municipio</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <input type="text" name="ciudad" id="input-ciudad" 
+                                   placeholder="Escriba 3 letras..." list="lista-ciudades" 
+                                   autocomplete="off" required>
+                            <datalist id="lista-ciudades"></datalist>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Teléfono Movil / Fijo <span style="color:#94a3b8; font-weight:400;">(Opcional)</span></label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-phone"></i>
+                            <input type="tel" name="telefono" placeholder="Ej: 3001234567">
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Nombre del Solicitante</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-user"></i>
+                            <input type="text" name="nombre" placeholder="Nombre completo de quien radica" 
+                                   required>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Cargo / Rol Laboral <span style="color:#94a3b8; font-weight:400;">(Opcional)</span></label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-briefcase"></i>
+                            <input type="text" name="cargo" id="input-cargo" 
+                                   placeholder="Escriba su cargo..." list="lista-cargos" 
+                                   autocomplete="off">
+                            <datalist id="lista-cargos"></datalist>
+                        </div>
+                    </div>
+
+                    <div class="field-group col-span-2">
+                        <label>Correo Electrónico Oficial</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-envelope"></i>
+                            <input type="email" name="email" placeholder="Para envío de respuesta técnica" 
+                                   value="{% if request.user.is_authenticated %}{{ request.user.email }}{% endif %}" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 2: Solicitud -->
+            <div class="section">
+                <div class="section-header">
+                    <i class="fa-solid fa-file-medical"></i>
+                    <h2>Detalles de la PQRS</h2>
+                </div>
+                <div class="input-grid">
+                    <div class="field-group">
+                        <label>Tipo de Solicitud</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-tag"></i>
+                            <select name="tipo_solicitud" required style="padding-left: 42px;">
+                                <option value="">-- Seleccione Tipo --</option>
+                                {% for key, value in TIPO_CHOICES %}
+                                    <option value="{{ key }}">{{ value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Asunto del Requerimiento</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-heading"></i>
+                            <input type="text" name="asunto" placeholder="Especifique el motivo brevemente" required>
+                        </div>
+                    </div>
+
+                    <div class="field-group col-span-2">
+                        <label>Descripción y Sustentación</label>
+                        <textarea name="descripcion" rows="5" 
+                                  placeholder="Detalle los hechos: Lote del producto, fecha, ID de despacho y situación encontrada..." 
+                                  required></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 3: Archivos -->
+            <div class="section">
+                <div class="section-header">
+                    <i class="fa-solid fa-paperclip"></i>
+                    <h2>Evidencia Técnica</h2>
+                </div>
+                <div class="upload-zone" onclick="document.getElementById('file-input').click();">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <p id="file-label">Haga clic o arrastre las evidencias aquí</p>
+                    <span>Formatos admitidos: JPG, PNG, PDF (Máx. 10MB)</span>
+                    <input type="file" id="file-input" name="adjuntos" multiple style="display:none;" onchange="updateFileName(this)">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+                <i class="fa-solid fa-paper-plane"></i> Radicar Solicitud Oficial
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function updateFileName(input) {
+        const label = document.getElementById('file-label');
+        if (input.files.length > 0) {
+            label.innerText = input.files.length + ' archivo(s) listo(s) para subir';
+            label.parentElement.style.borderColor = 'var(--success)';
+            label.parentElement.style.background = '#f0fdf4';
+        } else {
+            label.innerText = 'Haga clic o arrastre las evidencias aquí';
+            label.parentElement.style.borderColor = '#cbd5e1';
+            label.parentElement.style.background = 'rgba(255,255,255,0.5)';
+        }
+    }
+
+    // Función genérica para búsqueda dinámica (Autocomplete)
+    function setupAutocomplete(inputId, datalistId, apiEndpoint, minChars = 3) {
+        const input = document.getElementById(inputId);
+        const datalist = document.getElementById(datalistId);
+        if (!input || !datalist) return;
+
+        input.addEventListener('input', function() {
+            const query = this.value;
+            if (query.length >= minChars) {
+                fetch(`${apiEndpoint}?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        datalist.innerHTML = '';
+                        data.results.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.nombre;
+                            datalist.appendChild(option);
+                        });
+                    })
+                    .catch(err => console.error('Error autocomplete:', err));
+            } else {
+                datalist.innerHTML = '';
+            }
+        });
+    }
+
+    // Inicializar autocompletados
+    setupAutocomplete('input-cliente', 'lista-clientes', '/api/buscar-clientes/', 3);
+    setupAutocomplete('input-ciudad', 'lista-ciudades', '/api/buscar-ciudades/', 3);
+    setupAutocomplete('input-cargo', 'lista-cargos', '/api/buscar-cargos/', 2);
+
+    // Animación de envío y feedback
+    document.querySelector('form').onsubmit = function() {
+        const btn = document.getElementById('submitBtn');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando Radicación...';
+        btn.style.opacity = '0.7';
+        btn.style.pointerEvents = 'none';
+        btn.style.background = 'var(--primary)';
+    }
+</script>
+
+</body>
+</html>

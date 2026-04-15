@@ -1,0 +1,170 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+
+{% block title %}Configuración SLA | UNIDOSSIS PQRS{% endblock %}
+
+
+{% block content %}
+    <div class="page-header">
+        <div>
+            <h1><i class="fa-solid fa-sliders" style="color:var(--accent);"></i> Configuración SLA y Alertas</h1>
+            <p>Parametrice los tiempos límite del acuerdo de servicio. Las alertas se envían automáticamente a los usuarios internos registrados.</p>
+        </div>
+    </div>
+
+    {% if mensaje %}
+    <div class="alert alert-{{ mensaje.tipo }}">
+        <i class="fa-solid fa-circle-check"></i> {{ mensaje.texto }}
+    </div>
+    {% endif %}
+
+    <div class="config-grid">
+        <!-- Formulario -->
+        <div class="panel">
+            <div class="panel-title"><i class="fa-solid fa-timer"></i> Parámetros del SLA</div>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>⚠️ Días para alerta "En Peligro"</label>
+                    <div class="input-with-unit">
+                        <input type="number" name="dias_alerta_peligro" id="input-peligro" value="{{ config.dias_alerta_peligro|default:11 }}" min="1" max="30" oninput="actualizarPreviewSLA()">
+                        <span class="unit-label">días desde la creación del ticket</span>
+                    </div>
+                    <p class="help-text">Al superar este número de días, el ticket se marcará como "En Peligro" y se enviarán alertas.</p>
+                </div>
+                <div class="form-group">
+                    <label>🚨 Días para alerta "Vencido / Escalamiento"</label>
+                    <div class="input-with-unit">
+                        <input type="number" name="dias_alerta_vencido" id="input-vencido" value="{{ config.dias_alerta_vencido|default:15 }}" min="1" max="60" oninput="actualizarPreviewSLA()">
+                        <span class="unit-label">días desde la creación del ticket</span>
+                    </div>
+                    <p class="help-text">Al superar este número, el ticket se escala automáticamente a la administración central.</p>
+                </div>
+                <button type="submit" class="btn-save">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Configuración SLA
+                </button>
+            </form>
+        </div>
+
+        <!-- Panel derecho -->
+        <div>
+            <!-- Vista previa -->
+            <div class="panel" style="margin-bottom:20px;">
+                <div class="panel-title"><i class="fa-solid fa-timeline"></i> Vista Previa del SLA</div>
+                <div class="sla-preview">
+                    <div class="sla-timeline">
+                        <div class="sla-step verde">
+                            <div class="sla-icon">✅</div>
+                            <div>
+                                <div class="sla-name">En Tiempo</div>
+                                <div class="sla-range">Días 1 → <span id="preview-peligro">{{ config.dias_alerta_peligro|default:11|add:"-1" }}</span></div>
+                            </div>
+                        </div>
+                        <div class="sla-step amarillo">
+                            <div class="sla-icon">⚠️</div>
+                            <div>
+                                <div class="sla-name">En Peligro — Alerta email</div>
+                                <div class="sla-range">Días <span id="preview-peligro2">{{ config.dias_alerta_peligro|default:11 }}</span> → <span id="preview-vencido-pre">{{ config.dias_alerta_vencido|default:15|add:"-1" }}</span></div>
+                            </div>
+                        </div>
+                        <div class="sla-step rojo">
+                            <div class="sla-icon">🚨</div>
+                            <div>
+                                <div class="sla-name">Vencido — Escalamiento automático</div>
+                                <div class="sla-range">Día <span id="preview-vencido">{{ config.dias_alerta_vencido|default:15 }}</span> en adelante</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Destinatarios automáticos -->
+            <div class="panel" style="margin-bottom:20px;">
+                <div class="panel-title"><i class="fa-solid fa-envelope-circle-check"></i> Destinatarios de Alertas</div>
+                <div style="padding:16px 0; display:flex; flex-direction:column; gap:16px;">
+
+                    <div style="display:flex; align-items:flex-start; gap:12px; padding:14px; background:#FFF7ED; border-radius:12px; border:1px solid #FED7AA;">
+                        <span style="width:32px; height:32px; background:#FFEDD5; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">⚠️</span>
+                        <div>
+                            <div style="font-size:12px; font-weight:700; color:#9a3412; margin-bottom:6px;">Alerta "En Peligro"</div>
+                            <div style="font-size:12px; color:#78350f; line-height:1.6;">
+                                Se notifica automáticamente al <strong>Director Regional</strong> de la regional del ticket y a los <strong>Supervisores</strong>.
+                                {% if directores_regionales %}
+                                <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+                                    {% for d in directores_regionales %}
+                                    <span style="background:white; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; border:1px solid #FED7AA;">
+                                        {{ d.user.email|default:d.user.username }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:flex-start; gap:12px; padding:14px; background:#FEF2F2; border-radius:12px; border:1px solid #FECACA;">
+                        <span style="width:32px; height:32px; background:#FEE2E2; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">🚨</span>
+                        <div>
+                            <div style="font-size:12px; font-weight:700; color:#991b1b; margin-bottom:6px;">Escalamiento "Vencido"</div>
+                            <div style="font-size:12px; color:#7f1d1d; line-height:1.6;">
+                                Se escala automáticamente a los <strong>Administradores PQRS</strong> y <strong>Super Administradores</strong>.
+                                {% if admins_pqrs %}
+                                <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+                                    {% for a in admins_pqrs %}
+                                    <span style="background:white; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; border:1px solid #FECACA;">
+                                        {{ a.user.email|default:a.user.username }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="font-size:11px; color:var(--text-muted); text-align:center; padding:6px; background:var(--bg); border-radius:8px;">
+                        <i class="fa-solid fa-info-circle"></i>
+                        Los destinatarios se configuran en <a href="{% url 'gestionar_clientes' %}?tab=usuarios" style="color:var(--accent); font-weight:600;">Clientes y Usuarios → Usuarios Internos</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info comando -->
+            <div class="info-card">
+                <h4><i class="fa-solid fa-terminal"></i> Cómo activar las alertas automáticas</h4>
+                <p style="font-size:13px; color:#1e40af; line-height:1.7;">Ejecuta este comando diariamente para que el sistema envíe las alertas:</p>
+                <div style="background:#1e293b; color:#7dd3fc; padding:12px; border-radius:10px; font-family:monospace; font-size:13px; margin-top:10px;">
+                    python manage.py verificar_sla
+                </div>
+                <p style="font-size:12px; color:#3b82f6; margin-top:10px;">💡 Puedes programarlo en Windows Task Scheduler para que se ejecute cada día a las 7am automáticamente.</p>
+            </div>
+
+            {% if config and config.fecha_actualizacion %}
+            <div style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:14px;">
+                <i class="fa-solid fa-clock"></i> Última actualización: {{ config.fecha_actualizacion|date:"d/m/Y H:i" }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function actualizarPreviewSLA() {
+    const peligro = parseInt(document.getElementById('input-peligro').value) || 11;
+    const vencido = parseInt(document.getElementById('input-vencido').value) || 15;
+
+    // Actualizar rangos en la vista previa
+    document.getElementById('preview-peligro').textContent = peligro - 1;
+    document.getElementById('preview-peligro2').textContent = peligro;
+    document.getElementById('preview-vencido-pre').textContent = vencido - 1;
+    document.getElementById('preview-vencido').textContent = vencido;
+
+    // Animar los pasos para mostrar que hubo cambio
+    document.querySelectorAll('.sla-step').forEach(step => {
+        step.style.transition = 'transform 0.2s ease';
+        step.style.transform = 'scale(1.02)';
+        setTimeout(() => step.style.transform = 'scale(1)', 200);
+    });
+}
+</script>
+{% endblock %}

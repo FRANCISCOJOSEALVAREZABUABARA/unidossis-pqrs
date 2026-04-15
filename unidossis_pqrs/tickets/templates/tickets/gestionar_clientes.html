@@ -1,0 +1,1246 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+
+{% block title %}Consola de Administración | UNIDOSSIS{% endblock %}
+
+
+{% block content %}
+<style>
+    /* ═══ Tab System ═══ */
+    .admin-tabs { display:flex; gap:4px; background:var(--border-light); padding:4px; border-radius:14px; margin-bottom:24px; width:fit-content; }
+    .admin-tab {
+        padding:10px 24px; border:none; background:transparent; border-radius:10px;
+        font-size:13px; font-weight:600; color:var(--text-muted); cursor:pointer;
+        transition:all 0.25s ease; display:flex; align-items:center; gap:8px; font-family:inherit;
+    }
+    .admin-tab:hover { color:var(--text-main); background:rgba(255,255,255,0.5); }
+    .admin-tab.active { background:white; color:var(--accent); box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+    .tab-count { background:var(--bg); padding:2px 8px; border-radius:8px; font-size:11px; font-weight:700; }
+    .admin-tab.active .tab-count { background:var(--accent-soft); color:var(--accent); }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; animation: fadeTab 0.3s ease; }
+    @keyframes fadeTab { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    /* Role badges */
+    .role-badge { padding:4px 12px; border-radius:8px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:5px; letter-spacing:0.3px; white-space:nowrap; }
+    .role-badge.admin_pqrs { background:#EFF6FF; color:#1e40af; }
+    .role-badge.director_regional { background:#F0FDF4; color:#166534; }
+    .role-badge.supervisor { background:#FFF7ED; color:#9a3412; }
+</style>
+
+    <!-- PESTAÑAS LATERALES: CLIENTES -->
+    <div class="side-tabs" id="sideTabsClientes" style="{% if tab_activa != 'clientes' %}display:none{% endif %}">
+        <div class="side-tab" onclick="abrirDrawer('drawer-1')" title="Nueva Institución">
+            <i class="fa-solid fa-hospital-user"></i>
+            <span>Nuevo</span>
+        </div>
+        <div class="side-tab" onclick="abrirDrawer('drawer-2')" title="Habilitar Accesos">
+            <i class="fa-solid fa-key"></i>
+            <span>Acceso</span>
+        </div>
+    </div>
+
+    <!-- PESTAÑAS LATERALES: USUARIOS -->
+    <div class="side-tabs" id="sideTabsUsuarios" style="{% if tab_activa != 'usuarios' %}display:none{% endif %}">
+        <div class="side-tab" onclick="abrirDrawer('drawer-usuarios')" title="Nuevo Usuario Interno">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>Nuevo</span>
+        </div>
+    </div>
+
+    <div class="page-header">
+        <div>
+            <h1>Consola de Administración</h1>
+            <p>Gestione instituciones clientes y usuarios internos del sistema.</p>
+        </div>
+        <!-- Botones pestaña Clientes -->
+        <div id="headerBtnsClientes" style="display:{% if tab_activa == 'clientes' %}flex{% else %}none{% endif %}; gap:10px;">
+            <button class="btn btn-outline" onclick="abrirDrawer('drawer-2')" style="gap:8px; border-color:var(--success); color:var(--success);">
+                <i class="fa-solid fa-user-shield"></i> Habilitar Acceso
+            </button>
+            <button class="btn btn-primary" onclick="abrirDrawer('drawer-1')" style="gap:8px;">
+                <i class="fa-solid fa-plus"></i> Nueva Institución
+            </button>
+        </div>
+        <!-- Botones pestaña Usuarios -->
+        <div id="headerBtnsUsuarios" style="display:{% if tab_activa == 'usuarios' %}flex{% else %}none{% endif %}; gap:10px;">
+            <button class="btn btn-primary" onclick="abrirDrawer('drawer-usuarios')" style="gap:8px;">
+                <i class="fa-solid fa-user-plus"></i> Nuevo Usuario
+            </button>
+        </div>
+    </div>
+
+    {% if mensaje %}
+    <div class="alert alert-{{ mensaje.tipo }}">
+        <i class="fa-solid {% if mensaje.tipo == 'exito' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i>
+        {{ mensaje.texto }}
+    </div>
+    {% endif %}
+
+    <!-- ═══ BARRA DE PESTAÑAS ═══ -->
+    <div class="admin-tabs">
+        <button class="admin-tab {% if tab_activa == 'clientes' %}active{% endif %}" onclick="switchTab('clientes')" id="tab-btn-clientes">
+            <i class="fa-solid fa-hospital-user"></i> Clientes
+            <span class="tab-count">{{ todos_los_clientes.count }}</span>
+        </button>
+        <button class="admin-tab {% if tab_activa == 'usuarios' %}active{% endif %}" onclick="switchTab('usuarios')" id="tab-btn-usuarios">
+            <i class="fa-solid fa-user-tie"></i> Usuarios Internos
+            <span class="tab-count">{{ usuarios_internos|length }}</span>
+        </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ═══════ PANEL: CLIENTES ═══════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div id="panel-clientes" class="tab-panel {% if tab_activa == 'clientes' %}active{% endif %}">
+    <div class="list-column">
+        <div class="card">
+            <div style="padding:20px 28px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:40px; height:40px; background:var(--accent-soft); border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                        <i class="fa-solid fa-database" style="color:var(--accent); font-size:16px;"></i>
+                    </div>
+                    <div>
+                        <h2 style="font-size:16px; font-weight:700; color:var(--primary); margin:0;">Maestro de Instituciones</h2>
+                        <p style="font-size:12px; color:var(--text-muted); margin:0;" id="table-counter">Mostrando todos los registros</p>
+                    </div>
+                </div>
+                <div style="position:relative; flex:1; max-width:380px;">
+                    <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:13px;"></i>
+                    <input type="text" id="masterSearch" placeholder="Buscar institución, usuario, ciudad..." onkeyup="filterTable()"
+                           style="width:100%; padding:10px 14px 10px 40px; border:1.5px solid var(--border); border-radius:12px; font-size:13px; outline:none; transition:all 0.2s; font-family:inherit;"
+                           onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table id="masterTable" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:var(--bg);">
+                            <th style="padding:11px 20px; text-align:left; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Institución</th>
+                            <th style="padding:11px 20px; text-align:left; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Regional / Ciudad</th>
+                            <th style="padding:11px 20px; text-align:left; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Acceso</th>
+                            <th style="padding:11px 20px; text-align:center; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Estado</th>
+                            <th style="padding:11px 20px; text-align:center; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; width:110px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if todos_los_clientes %}
+                            {% for c in todos_los_clientes %}
+                            <tr style="border-top:1px solid var(--border-light); transition:background 0.15s; {% if not c.activo %}background:#fafafa;{% endif %}"
+                                onmouseover="this.style.background='var(--bg)'"
+                                onmouseout="this.style.background='{% if not c.activo %}#fafafa{% else %}#fff{% endif %}'">
+                                <td style="padding:13px 20px; vertical-align:middle; max-width:260px;">
+                                    <div style="font-weight:700; color:var(--primary); font-size:13px; line-height:1.3;">{{ c.nombre }}</div>
+                                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                                        <i class="fa-solid fa-envelope" style="font-size:9px;"></i> {{ c.email_principal|default:"Sin correo" }}
+                                    </div>
+                                </td>
+                                <td style="padding:13px 20px; vertical-align:middle; white-space:nowrap;">
+                                    <div style="font-size:13px; font-weight:600; color:var(--text-main);">{{ c.get_regional_display|default:"—" }}</div>
+                                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                                        <i class="fa-solid fa-location-dot" style="font-size:9px;"></i> {{ c.ciudad|default:"Sin ciudad" }}
+                                    </div>
+                                </td>
+                                <td style="padding:13px 20px; vertical-align:middle;">
+                                    {% if c.user %}
+                                        <span style="display:inline-flex; align-items:center; gap:5px; background:var(--accent-soft); color:var(--accent); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:600; font-family:monospace;">
+                                            <i class="fa-solid fa-user-check" style="font-size:9px;"></i>{{ c.user.username }}
+                                        </span>
+                                    {% else %}
+                                        <span style="font-size:12px; color:var(--text-faint); font-style:italic;">Sin acceso</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding:13px 20px; vertical-align:middle; text-align:center;">
+                                    <div id="status-container-{{ c.id }}">
+                                        {% if not c.activo %}
+                                            <span class="status-badge status-pending" style="font-size:10px; letter-spacing:0.3px; text-transform:uppercase;">Inactivo</span>
+                                        {% elif c.user %}
+                                            <span class="status-badge status-resolved" style="font-size:10px; letter-spacing:0.3px; text-transform:uppercase;">Habilitado</span>
+                                        {% else %}
+                                            <span class="status-badge status-review" style="font-size:10px; letter-spacing:0.3px; text-transform:uppercase;">Pendiente</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td style="padding:13px 20px; vertical-align:middle;">
+                                    <div style="display:flex; gap:5px; justify-content:center;">
+                                        <button type="button"
+                                            style="width:30px; height:30px; border:1.5px solid var(--accent); background:transparent; border-radius:8px; cursor:pointer; color:var(--accent); transition:all 0.2s; display:flex; align-items:center; justify-content:center;"
+                                            title="Configurar cliente"
+                                            onmouseover="this.style.background='var(--accent)';this.style.color='white';"
+                                            onmouseout="this.style.background='transparent';this.style.color='var(--accent)';"
+                                            onclick="abrirModalEditar({id:'{{ c.id }}',nombre:'{{ c.nombre|escapejs }}',regional:'{{ c.regional|default:'' }}',email_p:'{{ c.email_principal|default:'' }}',email_a:'{{ c.emails_adicionales|default:'' }}',ciudad_nombre:'{{ c.ciudad.nombre|escapejs|default:'' }}',ciudad_id:'{{ c.ciudad.id|default:'' }}',activo:'{{ c.activo|yesno:"true,false" }}',has_user:'{{ c.user|yesno:"true,false" }}',username:'{{ c.user.username|default:'' }}'})">
+                                            <i class="fa-solid fa-pen-to-square" style="font-size:11px;"></i>
+                                        </button>
+                                        <form method="POST" style="margin:0; display:flex;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="inactivar">
+                                            <input type="hidden" name="cliente_id" value="{{ c.id }}">
+                                            <button type="submit"
+                                                style="width:30px; height:30px; border:1.5px solid {% if c.activo %}var(--warning){% else %}var(--success){% endif %}; background:transparent; border-radius:8px; cursor:pointer; color:{% if c.activo %}var(--warning){% else %}var(--success){% endif %}; transition:all 0.2s; display:flex; align-items:center; justify-content:center;"
+                                                title="{% if c.activo %}Desactivar{% else %}Activar{% endif %}"
+                                                onmouseover="this.style.background='{% if c.activo %}var(--warning){% else %}var(--success){% endif %}';this.style.color='white';"
+                                                onmouseout="this.style.background='transparent';this.style.color='{% if c.activo %}var(--warning){% else %}var(--success){% endif %}';">
+                                                <i class="fa-solid {% if c.activo %}fa-power-off{% else %}fa-circle-check{% endif %}" style="font-size:11px;"></i>
+                                            </button>
+                                        </form>
+                                        <button type="button"
+                                            style="width:30px; height:30px; border:1.5px solid var(--danger); background:transparent; border-radius:8px; cursor:pointer; color:var(--danger); transition:all 0.2s; display:flex; align-items:center; justify-content:center;"
+                                            title="Eliminar"
+                                            onmouseover="this.style.background='var(--danger)';this.style.color='white';"
+                                            onmouseout="this.style.background='transparent';this.style.color='var(--danger)';"
+                                            onclick="confirmarEliminacion('{{ c.id }}','{{ c.nombre|escapejs }}')">
+                                            <i class="fa-solid fa-trash-can" style="font-size:11px;"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" style="padding:80px 40px; text-align:center; color:var(--text-faint);">
+                                    <i class="fa-solid fa-folder-open" style="font-size:40px; margin-bottom:16px; display:block; color:var(--border);"></i>
+                                    <p style="margin:0;">No hay instituciones registradas.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding:14px 28px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:#fafafa; border-radius:0 0 20px 20px;">
+                <span style="font-size:12px; color:var(--text-muted);" id="pagination-info"></span>
+                <div style="display:flex; gap:6px;" id="pagination-controls"></div>
+            </div>
+        </div>
+    </div>
+    </div><!-- /panel-clientes -->
+
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- ═══════ PANEL: USUARIOS INTERNOS ═════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div id="panel-usuarios" class="tab-panel {% if tab_activa == 'usuarios' %}active{% endif %}">
+    <div class="list-column">
+        <div class="card">
+            <div style="padding:20px 28px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:40px; height:40px; background:#EFF6FF; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                        <i class="fa-solid fa-users-gear" style="color:#1e40af; font-size:16px;"></i>
+                    </div>
+                    <div>
+                        <h2 style="font-size:16px; font-weight:700; color:var(--primary); margin:0;">Equipo Interno</h2>
+                        <p style="font-size:12px; color:var(--text-muted); margin:0;" id="users-table-counter">Mostrando todos los registros</p>
+                    </div>
+                </div>
+                <div style="position:relative; flex:1; max-width:380px;">
+                    <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:13px;"></i>
+                    <input type="text" id="usersSearch" placeholder="Buscar nombre, usuario, rol..." onkeyup="filterUsersTable()"
+                           style="width:100%; padding:10px 14px 10px 40px; border:1.5px solid var(--border); border-radius:12px; font-size:13px; outline:none; transition:all 0.2s; font-family:inherit;"
+                           onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table id="usersTable" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:var(--bg);">
+                            <th style="padding:11px 20px; text-align:left; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Nombre</th>
+                            <th style="padding:11px 20px; text-align:left; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Usuario / Email</th>
+                            <th style="padding:11px 20px; text-align:left; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Rol</th>
+                            <th style="padding:11px 20px; text-align:left; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Regional</th>
+                            <th style="padding:11px 20px; text-align:center; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Estado</th>
+                            <th style="padding:11px 20px; text-align:center; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; width:110px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if usuarios_internos %}
+                            {% for u in usuarios_internos %}
+                            <tr style="border-top:1px solid var(--border-light); transition:background 0.15s; {% if not u.user.is_active %}background:#fafafa;{% endif %}"
+                                onmouseover="this.style.background='var(--bg)'"
+                                onmouseout="this.style.background='{% if not u.user.is_active %}#fafafa{% else %}#fff{% endif %}'">
+                                <td style="padding:13px 20px; vertical-align:middle; max-width:220px;">
+                                    <div style="font-weight:700; color:var(--primary); font-size:13px; line-height:1.3;">
+                                        {{ u.user.get_full_name|default:u.user.username }}
+                                    </div>
+                                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                                        Creado: {{ u.user.date_joined|date:"d M Y" }}
+                                    </div>
+                                </td>
+                                <td style="padding:13px 20px; vertical-align:middle;">
+                                    <div style="display:inline-flex; align-items:center; gap:5px; background:var(--accent-soft); color:var(--accent); padding:4px 10px; border-radius:8px; font-size:12px; font-weight:600; font-family:monospace;">
+                                        <i class="fa-solid fa-user" style="font-size:9px;"></i>{{ u.user.username }}
+                                    </div>
+                                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+                                        <i class="fa-solid fa-envelope" style="font-size:9px;"></i> {{ u.user.email|default:"Sin email" }}
+                                    </div>
+                                    {% if u.telefono %}
+                                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                                        <i class="fa-solid fa-phone" style="font-size:9px;"></i> {{ u.telefono }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td style="padding:13px 20px; vertical-align:middle;">
+                                    <span class="role-badge {{ u.rol }}">
+                                        {% if u.rol == 'admin_pqrs' %}<i class="fa-solid fa-shield-halved" style="font-size:10px;"></i>{% endif %}
+                                        {% if u.rol == 'director_regional' %}<i class="fa-solid fa-map-location-dot" style="font-size:10px;"></i>{% endif %}
+                                        {% if u.rol == 'supervisor' %}<i class="fa-solid fa-eye" style="font-size:10px;"></i>{% endif %}
+                                        {{ u.get_rol_display }}
+                                    </span>
+                                </td>
+                                <td style="padding:13px 20px; vertical-align:middle;">
+                                    <div style="font-size:13px; font-weight:600; color:var(--text-main);">
+                                        {{ u.get_regional_display|default:"— Sin regional" }}
+                                    </div>
+                                </td>
+                                <td style="padding:13px 20px; vertical-align:middle; text-align:center;">
+                                    {% if u.user.is_active %}
+                                        <span class="status-badge status-resolved" style="font-size:10px; letter-spacing:0.3px; text-transform:uppercase;">Activo</span>
+                                    {% else %}
+                                        <span class="status-badge status-pending" style="font-size:10px; letter-spacing:0.3px; text-transform:uppercase;">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding:13px 20px; vertical-align:middle;">
+                                    <div style="display:flex; gap:5px; justify-content:center;">
+                                        <button type="button"
+                                            style="width:30px; height:30px; border:1.5px solid var(--accent); background:transparent; border-radius:8px; cursor:pointer; color:var(--accent); transition:all 0.2s; display:flex; align-items:center; justify-content:center;"
+                                            title="Editar usuario"
+                                            onmouseover="this.style.background='var(--accent)';this.style.color='white';"
+                                            onmouseout="this.style.background='transparent';this.style.color='var(--accent)';"
+                                            onclick="abrirModalEditarUsuario({id:'{{ u.user.id }}',first_name:'{{ u.user.first_name|escapejs }}',last_name:'{{ u.user.last_name|escapejs }}',email:'{{ u.user.email|default:'' }}',username:'{{ u.user.username }}',rol:'{{ u.rol }}',regional:'{{ u.regional|default:'' }}',telefono:'{{ u.telefono|default:'' }}'})">
+                                            <i class="fa-solid fa-pen-to-square" style="font-size:11px;"></i>
+                                        </button>
+                                        <form method="POST" action="?tab=usuarios" style="margin:0; display:flex;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="toggle_usuario">
+                                            <input type="hidden" name="user_id" value="{{ u.user.id }}">
+                                            <input type="hidden" name="_tab" value="usuarios">
+                                            <button type="submit"
+                                                style="width:30px; height:30px; border:1.5px solid {% if u.user.is_active %}var(--warning){% else %}var(--success){% endif %}; background:transparent; border-radius:8px; cursor:pointer; color:{% if u.user.is_active %}var(--warning){% else %}var(--success){% endif %}; transition:all 0.2s; display:flex; align-items:center; justify-content:center;"
+                                                title="{% if u.user.is_active %}Desactivar{% else %}Activar{% endif %}"
+                                                onmouseover="this.style.background='{% if u.user.is_active %}var(--warning){% else %}var(--success){% endif %}';this.style.color='white';"
+                                                onmouseout="this.style.background='transparent';this.style.color='{% if u.user.is_active %}var(--warning){% else %}var(--success){% endif %}';">
+                                                <i class="fa-solid {% if u.user.is_active %}fa-power-off{% else %}fa-circle-check{% endif %}" style="font-size:11px;"></i>
+                                            </button>
+                                        </form>
+                                        <button type="button"
+                                            style="width:30px; height:30px; border:1.5px solid var(--danger); background:transparent; border-radius:8px; cursor:pointer; color:var(--danger); transition:all 0.2s; display:flex; align-items:center; justify-content:center;"
+                                            title="Eliminar usuario"
+                                            onmouseover="this.style.background='var(--danger)';this.style.color='white';"
+                                            onmouseout="this.style.background='transparent';this.style.color='var(--danger)';"
+                                            onclick="confirmarEliminacionUsuario('{{ u.user.id }}','{{ u.user.get_full_name|default:u.user.username|escapejs }}')">
+                                            <i class="fa-solid fa-trash-can" style="font-size:11px;"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" style="padding:80px 40px; text-align:center; color:var(--text-faint);">
+                                    <i class="fa-solid fa-user-plus" style="font-size:40px; margin-bottom:16px; display:block; color:var(--border);"></i>
+                                    <p style="margin:0; font-size:14px;">No hay usuarios internos registrados.</p>
+                                    <p style="margin:6px 0 0; font-size:12px;">Haz clic en <strong>"Nuevo Usuario"</strong> para crear el primero.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding:14px 28px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:#fafafa; border-radius:0 0 20px 20px;">
+                <span style="font-size:12px; color:var(--text-muted);" id="users-pagination-info"></span>
+                <div style="display:flex; gap:6px;" id="users-pagination-controls"></div>
+            </div>
+        </div>
+    </div>
+    </div><!-- /panel-usuarios -->
+
+{% endblock %}
+
+{% block page_js %}
+<!-- DRAWER OVERLAY -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="cerrarDrawers()"></div>
+
+<!-- DRAWER 1: Registrar Institución -->
+<div class="drawer" id="drawer-1">
+    <div class="drawer-header">
+        <h3><i class="fa-solid fa-hotel" style="color:var(--accent);"></i> Registrar Nueva Institución</h3>
+        <button class="drawer-close" onclick="cerrarDrawers()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="drawer-body">
+        <form method="POST" autocomplete="off" style="display:flex; flex-direction:column; gap:18px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="crear_institucion">
+            <div class="form-group">
+                <label>Nombre de la Institución</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-hospital"></i>
+                    <input type="text" name="nombre_institucion" id="nombre-institucion-registro" placeholder="Ej: FUNDACIÓN ABOOD SHAIO" list="lista-maestro-instituciones" required autocomplete="off">
+                </div>
+                <datalist id="lista-maestro-instituciones"></datalist>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Ciudad</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <input type="text" id="crear-ciudad" placeholder="Busque ciudad..." list="crear-lista-ciudades" required>
+                    </div>
+                    <input type="hidden" name="ciudad_id" id="crear-ciudad-id">
+                    <datalist id="crear-lista-ciudades"></datalist>
+                </div>
+                <div class="form-group">
+                    <label>Regional</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                        <select name="regional" required>
+                            <option value="">-- Regional --</option>
+                            {% for key, val in REGIONAL_CHOICES %}
+                            <option value="{{ key }}">{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Email Principal (Notificaciones)</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" name="email_principal" placeholder="correo@institucion.com" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Emails Adicionales (CC)</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-envelopes-bulk"></i>
+                    <input type="text" name="emails_adicionales" placeholder="Separados por coma">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:8px;">
+                <i class="fa-solid fa-plus"></i> Guardar Institución
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- DRAWER 2: Habilitar Acceso -->
+<div class="drawer" id="drawer-2">
+    <div class="drawer-header">
+        <h3><i class="fa-solid fa-user-shield" style="color:var(--accent);"></i> Habilitar Acceso al Portal</h3>
+        <button class="drawer-close" onclick="cerrarDrawers()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="drawer-body">
+        <form method="POST" id="form-acceso" autocomplete="off" style="display:flex; flex-direction:column; gap:18px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="crear">
+            <div class="form-group">
+                <label>Buscar Institución Registrada</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="search-cliente-acceso" placeholder="Escriba nombre de clínica..." list="lista-clientes-admin" autocomplete="off" required>
+                </div>
+                <input type="hidden" name="cliente_id" id="input-cliente-id">
+                <datalist id="lista-clientes-admin"></datalist>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Regional</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-map"></i>
+                        <select name="regional" id="select-regional-acceso" required>
+                            <option value="">-- Regional --</option>
+                            {% for key, val in REGIONAL_CHOICES %}
+                            <option value="{{ key }}">{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email Principal</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-envelope-circle-check"></i>
+                        <input type="email" name="email_principal" id="input-email-p-acceso" placeholder="correo@institucion.com" required>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Emails Adicionales (CC)</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <input type="text" name="emails_adicionales" id="input-email-a-acceso" placeholder="separados por coma">
+                </div>
+            </div>
+            <div style="background:var(--bg); padding:18px; border-radius:14px; border:1px solid var(--border); display:flex; flex-direction:column; gap:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase;">Credenciales del Portal</span>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="sugerirCredenciales()">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Autogenerar
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label>Nombre de Usuario</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-user-tag"></i>
+                        <input type="text" name="username" id="input-user" placeholder="ej: hospital_marly" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña Temporal</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="text" name="password" id="input-pass" placeholder="Clave inicial" required autocomplete="new-password">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email de Acceso (Opcional)</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-at"></i>
+                        <input type="email" name="email" id="input-email-user" placeholder="Opcional">
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-shield-check"></i> Habilitar Portal de Cliente
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- DRAWER 3: Nuevo Usuario Interno -->
+<div class="drawer" id="drawer-usuarios">
+    <div class="drawer-header">
+        <h3><i class="fa-solid fa-user-plus" style="color:#1e40af;"></i> Registrar Usuario Interno</h3>
+        <button class="drawer-close" onclick="cerrarDrawers()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="drawer-body">
+        <form method="POST" action="?tab=usuarios" autocomplete="off" style="display:flex; flex-direction:column; gap:18px;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="crear_usuario">
+            <input type="hidden" name="_tab" value="usuarios">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" name="first_name" placeholder="Ej: María" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Apellido</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" name="last_name" placeholder="Ej: Rodríguez">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Email Corporativo</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" name="email" placeholder="usuario@unidossis.com.co">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Teléfono / Celular</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-phone"></i>
+                    <input type="tel" name="telefono" placeholder="Ej: 3001234567">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Rol del Usuario</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <select name="rol" id="nuevo-user-rol" required onchange="toggleRegionalField('nuevo')">
+                            <option value="">-- Seleccionar Rol --</option>
+                            {% for key, val in ROL_CHOICES_INTERNOS %}
+                            <option value="{{ key }}">{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="nuevo-regional-group">
+                    <label>Regional Asignada</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                        <select name="regional" id="nuevo-user-regional">
+                            <option value="">-- Todas las regionales --</option>
+                            {% for key, val in REGIONAL_CHOICES %}
+                            <option value="{{ key }}">{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div style="background:#EFF6FF; padding:18px; border-radius:14px; border:1px solid #BFDBFE; display:flex; flex-direction:column; gap:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:800; color:#1e40af; text-transform:uppercase;">
+                        <i class="fa-solid fa-key"></i> Credenciales de Acceso
+                    </span>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="sugerirCredencialesUsuario()">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Autogenerar
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label>Nombre de Usuario</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-user-tag"></i>
+                        <input type="text" name="username" id="nuevo-user-username" placeholder="ej: maria.rodriguez" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="text" name="password" id="nuevo-user-password" placeholder="Min. 8 caracteres" required autocomplete="new-password">
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:8px; background:#1e40af;">
+                <i class="fa-solid fa-user-plus"></i> Crear Usuario Interno
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de Edición de Cliente -->
+<div class="modal-overlay" id="modal-editar">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 style="margin:0; font-size:17px;"><i class="fa-solid fa-gear" style="color:var(--accent); margin-right:10px;"></i>Configuración de Cliente</h3>
+            <button class="btn btn-outline btn-sm" onclick="cerrarModalEditar()" style="width:32px; height:32px; padding:0; border-radius:50%;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form method="POST" autocomplete="off" id="form-editar-cliente" style="display:flex; flex-direction:column; flex:1; overflow:hidden; min-height:0;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="editar_cliente">
+            <input type="hidden" name="cliente_id" id="edit-cliente-id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nombre de la Institución</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-hospital"></i>
+                        <input type="text" name="nombre" id="edit-nombre" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Ciudad</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <input type="text" id="edit-ciudad-search" placeholder="Buscar..." list="edit-lista-ciudades">
+                        </div>
+                        <input type="hidden" name="ciudad_id" id="edit-ciudad-id">
+                        <datalist id="edit-lista-ciudades"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Regional</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <select name="regional" id="edit-regional" required>
+                                {% for key, val in REGIONAL_CHOICES %}
+                                <option value="{{ key }}">{{ val }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email Principal</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-envelope"></i>
+                        <input type="email" name="email_principal" id="edit-email-p" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Emails Adicionales (Copia CC)</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-envelopes-bulk"></i>
+                        <input type="text" name="emails_adicionales" id="edit-email-a">
+                    </div>
+                </div>
+                <div class="form-group" style="flex-direction: row; align-items: center; gap: 15px; background: var(--bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-top: 10px;">
+                    <div style="flex: 1;">
+                        <label style="margin: 0; display: block;">Estado de Activación</label>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 4px 0 0;">Active para permitir que el cliente use el portal.</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" name="activo" id="edit-activo">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="seccion-acceso-modal" style="margin-top: 25px; padding: 25px; background: var(--border-light); border-radius: 20px; border: 1px dashed #cbd5e1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <span style="font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-shield-halved"></i> <span id="label-acceso-modal">Asignar Acceso al Portal</span>
+                        </span>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="sugerirCredencialesModal()" id="btn-gen-modal">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Sugerir
+                        </button>
+                    </div>
+                    <div class="form-group" id="edit-group-user">
+                        <label>Usuario</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-user-tag"></i>
+                            <input type="text" name="username" id="edit-username" placeholder="ej: clinica_paz">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label id="label-pass-modal">Contraseña Temporal</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-key"></i>
+                            <input type="text" name="password" id="edit-password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="cerrarModalEditar()">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary" style="min-width:160px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de Eliminación de Cliente -->
+<div class="modal-overlay" id="modal-eliminar">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 style="margin:0; font-size:16px;"><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);"></i> Eliminar Cliente</h3>
+        </div>
+        <div class="modal-body" style="padding: 25px 35px;">
+            <p style="margin:0; color: var(--text-muted); font-size:14px; line-height:1.6;">¿Estás seguro que deseas eliminar permanentemente a <strong id="modal-nombre-cliente"></strong>? Esta acción no se puede deshacer.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="cerrarModal()">Cancelar</button>
+            <form method="POST" id="form-eliminar" style="margin:0;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="eliminar">
+                <input type="hidden" name="cliente_id" id="modal-cliente-id">
+                <button type="submit" class="btn btn-danger"><i class="fa-solid fa-trash"></i> Sí, Eliminar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Edición de Usuario Interno -->
+<div class="modal-overlay" id="modal-editar-usuario">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 style="margin:0; font-size:17px;"><i class="fa-solid fa-user-pen" style="color:#1e40af; margin-right:10px;"></i>Editar Usuario Interno</h3>
+            <button class="btn btn-outline btn-sm" onclick="cerrarModalEditarUsuario()" style="width:32px; height:32px; padding:0; border-radius:50%;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form method="POST" action="?tab=usuarios" autocomplete="off" id="form-editar-usuario" style="display:flex; flex-direction:column; flex:1; overflow:hidden; min-height:0;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="editar_usuario">
+            <input type="hidden" name="user_id" id="edituser-id">
+            <input type="hidden" name="_tab" value="usuarios">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-user"></i>
+                            <input type="text" name="first_name" id="edituser-firstname" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-user"></i>
+                            <input type="text" name="last_name" id="edituser-lastname">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-envelope"></i>
+                        <input type="email" name="email" id="edituser-email">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Teléfono / Celular</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-phone"></i>
+                        <input type="tel" name="telefono" id="edituser-telefono" placeholder="Ej: 3001234567">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Nombre de Usuario (login)</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-at"></i>
+                        <input type="text" name="username" id="edituser-username" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <select name="rol" id="edituser-rol" required onchange="toggleRegionalField('edit')">
+                                {% for key, val in ROL_CHOICES_INTERNOS %}
+                                <option value="{{ key }}">{{ val }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" id="edit-regional-group">
+                        <label>Regional</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <select name="regional" id="edituser-regional">
+                                <option value="">-- Todas --</option>
+                                {% for key, val in REGIONAL_CHOICES %}
+                                <option value="{{ key }}">{{ val }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:15px; padding:18px; background:#EFF6FF; border-radius:14px; border:1px solid #BFDBFE;">
+                    <span style="font-size:11px; font-weight:800; color:#1e40af; text-transform:uppercase; display:block; margin-bottom:12px;">
+                        <i class="fa-solid fa-key"></i> Cambiar Contraseña
+                    </span>
+                    <div class="form-group">
+                        <label>Nueva Contraseña (dejar vacío para mantener)</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-lock"></i>
+                            <input type="text" name="password" id="edituser-password" placeholder="Dejar vacío para no cambiar" autocomplete="new-password">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="cerrarModalEditarUsuario()">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary" style="min-width:160px; background:#1e40af;">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de Eliminación de Usuario -->
+<div class="modal-overlay" id="modal-eliminar-usuario">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 style="margin:0; font-size:16px;"><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);"></i> Eliminar Usuario</h3>
+        </div>
+        <div class="modal-body" style="padding: 25px 35px;">
+            <p style="margin:0; color: var(--text-muted); font-size:14px; line-height:1.6;">¿Estás seguro que deseas eliminar permanentemente al usuario <strong id="modal-nombre-usuario"></strong>? Se perderá su perfil y acceso al sistema.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="cerrarModalUsuario()">Cancelar</button>
+            <form method="POST" action="?tab=usuarios" id="form-eliminar-usuario" style="margin:0;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="eliminar_usuario">
+                <input type="hidden" name="user_id" id="modal-usuario-id">
+                <input type="hidden" name="_tab" value="usuarios">
+                <button type="submit" class="btn btn-danger"><i class="fa-solid fa-trash"></i> Sí, Eliminar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ═══════ TAB SWITCHING ═══════
+    function switchTab(tab) {
+        // Toggle panels
+        document.getElementById('panel-clientes').classList.toggle('active', tab === 'clientes');
+        document.getElementById('panel-usuarios').classList.toggle('active', tab === 'usuarios');
+        // Toggle side tabs
+        document.getElementById('sideTabsClientes').style.display = tab === 'clientes' ? '' : 'none';
+        document.getElementById('sideTabsUsuarios').style.display = tab === 'usuarios' ? '' : 'none';
+        // Toggle header buttons
+        document.getElementById('headerBtnsClientes').style.display = tab === 'clientes' ? 'flex' : 'none';
+        document.getElementById('headerBtnsUsuarios').style.display = tab === 'usuarios' ? 'flex' : 'none';
+        // Toggle tab buttons
+        document.querySelectorAll('.admin-tab').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('tab-btn-' + tab).classList.add('active');
+        // Update URL without refresh
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tab);
+        history.replaceState(null, '', url);
+    }
+
+    // ═══════ DRAWERS LATERALES ═══════
+    function abrirDrawer(id) {
+        cerrarDrawers();
+        document.getElementById('drawer-overlay').classList.add('open');
+        document.getElementById(id).classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function cerrarDrawers() {
+        document.getElementById('drawer-overlay').classList.remove('open');
+        document.querySelectorAll('.drawer').forEach(d => d.classList.remove('open'));
+        document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { cerrarDrawers(); cerrarModalEditar(); cerrarModal(); cerrarModalEditarUsuario(); cerrarModalUsuario(); }
+    });
+
+    // ═══════ CONFIGURACIÓN AUTOCOMPLETADO AJAX ═══════
+    function setupSearch(inputId, datalistId, hiddenId, apiEndpoint, extraCallback = null) {
+        const input = document.getElementById(inputId);
+        const datalist = document.getElementById(datalistId);
+        const hidden = hiddenId ? document.getElementById(hiddenId) : null;
+
+        input.addEventListener('input', function() {
+            const query = this.value;
+            if (query.length >= 2) {
+                fetch(`${apiEndpoint}?q=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        datalist.innerHTML = '';
+                        data.results.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.nombre;
+                            option.dataset.id = item.id;
+                            if (item.regional) option.dataset.regional = item.regional;
+                            if (item.email) option.dataset.email = item.email;
+                            if (item.emails_adicionales) option.dataset.emails_adicionales = item.emails_adicionales;
+                            datalist.appendChild(option);
+                        });
+                    });
+            }
+        });
+
+        input.addEventListener('change', function() {
+            const val = this.value;
+            const options = datalist.getElementsByTagName('option');
+            let found = false;
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === val) {
+                    if (hidden) hidden.value = options[i].dataset.id;
+                    found = true;
+                    if (extraCallback) extraCallback(options[i].dataset);
+                    break;
+                }
+            }
+            if (!found && hidden) hidden.value = "";
+        });
+    }
+
+    function cargarCliente(id, nombre, regional, email, emails_adicionales = '') {
+        document.getElementById('input-cliente-id').value = id;
+        document.getElementById('search-cliente-acceso').value = nombre;
+        if (regional) document.getElementById('select-regional-acceso').value = regional;
+        if (email) {
+            document.getElementById('input-email-p-acceso').value = email;
+            document.getElementById('input-email-user').value = email;
+        }
+        document.getElementById('input-email-a-acceso').value = emails_adicionales || '';
+    }
+
+    // Inicializar búsquedas
+    setupSearch('crear-ciudad', 'crear-lista-ciudades', 'crear-ciudad-id', '/api/buscar-ciudades/');
+    setupSearch('nombre-institucion-registro', 'lista-maestro-instituciones', null, '/api/buscar-maestro-instituciones/');
+    setupSearch('search-cliente-acceso', 'lista-clientes-admin', 'input-cliente-id', '/api/buscar-clientes-admin/', (data) => {
+        if (data.regional) document.getElementById('select-regional-acceso').value = data.regional;
+        if (data.email) {
+            document.getElementById('input-email-p-acceso').value = data.email;
+            document.getElementById('input-email-user').value = data.email;
+        }
+        document.getElementById('input-email-a-acceso').value = data.emails_adicionales || '';
+    });
+
+    function sugerirCredenciales() {
+        const name = document.getElementById('search-cliente-acceso').value;
+        if (!name) { alert('Primero seleccione una institución'); return; }
+        document.getElementById('input-user').value = generateSlug(name);
+        document.getElementById('input-pass').value = generatePass();
+    }
+
+    // ═══════ TABLA CLIENTES: FILTRO + PAGINACIÓN ═══════
+    const ROWS_PER_PAGE = 25;
+    let currentPage = 1;
+    let allRows = [];
+    let filteredRows = [];
+
+    function initTable() {
+        const table = document.getElementById('masterTable');
+        if (!table) return;
+        allRows = Array.from(table.querySelectorAll('tbody tr'));
+        filteredRows = [...allRows];
+        renderPage(1);
+    }
+
+    function filterTable() {
+        const query = document.getElementById('masterSearch').value.toUpperCase();
+        filteredRows = allRows.filter(row => row.innerText.toUpperCase().includes(query));
+        renderPage(1);
+    }
+
+    function renderPage(page) {
+        currentPage = page;
+        const start = (page - 1) * ROWS_PER_PAGE;
+        const end = start + ROWS_PER_PAGE;
+        allRows.forEach(row => row.style.display = 'none');
+        filteredRows.slice(start, end).forEach(row => row.style.display = '');
+        const total = filteredRows.length;
+        document.getElementById('table-counter').textContent =
+            `${total} institución${total !== 1 ? 'es' : ''} — mostrando ${start+1}–${Math.min(end, total)}`;
+        renderPagination(Math.ceil(total / ROWS_PER_PAGE));
+    }
+
+    function renderPagination(totalPages) {
+        const info = document.getElementById('pagination-info');
+        const controls = document.getElementById('pagination-controls');
+        if (!controls) return;
+        info.textContent = `Página ${currentPage} de ${totalPages}`;
+        controls.innerHTML = '';
+        const btnStyle = (active) => `width:32px; height:32px; border:1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}; background:${active ? 'var(--accent)' : 'white'}; color:${active ? 'white' : 'var(--text-muted)'}; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; transition:all 0.2s;`;
+        const prev = document.createElement('button');
+        prev.innerHTML = '<i class="fa-solid fa-chevron-left" style="font-size:10px;"></i>';
+        prev.style.cssText = btnStyle(false);
+        prev.disabled = currentPage === 1;
+        prev.style.opacity = currentPage === 1 ? '0.4' : '1';
+        prev.onclick = () => renderPage(currentPage - 1);
+        controls.appendChild(prev);
+        for (let i = 1; i <= totalPages; i++) {
+            if (totalPages > 7 && i > 2 && i < totalPages - 1 && Math.abs(i - currentPage) > 1) {
+                if (i === 3 || i === totalPages - 2) {
+                    const dots = document.createElement('span');
+                    dots.textContent = '···';
+                    dots.style.cssText = 'display:flex; align-items:center; padding:0 4px; color:var(--text-muted); font-size:12px;';
+                    controls.appendChild(dots);
+                }
+                continue;
+            }
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            btn.style.cssText = btnStyle(i === currentPage);
+            btn.onclick = () => renderPage(i);
+            controls.appendChild(btn);
+        }
+        const next = document.createElement('button');
+        next.innerHTML = '<i class="fa-solid fa-chevron-right" style="font-size:10px;"></i>';
+        next.style.cssText = btnStyle(false);
+        next.disabled = currentPage === totalPages;
+        next.style.opacity = currentPage === totalPages ? '0.4' : '1';
+        next.onclick = () => renderPage(currentPage + 1);
+        controls.appendChild(next);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { initTable(); initUsersTable(); });
+
+    // ═══════ MODAL EDITAR CLIENTE ═══════
+    function abrirModalEditar(data) {
+        document.getElementById('edit-cliente-id').value = data.id;
+        document.getElementById('edit-nombre').value = data.nombre;
+        document.getElementById('edit-regional').value = data.regional;
+        document.getElementById('edit-email-p').value = data.email_p;
+        document.getElementById('edit-email-a').value = data.email_a;
+        document.getElementById('edit-ciudad-search').value = data.ciudad_nombre;
+        document.getElementById('edit-ciudad-id').value = data.ciudad_id;
+        document.getElementById('edit-activo').checked = (data.activo === 'true');
+        const hasUser = (data.has_user === 'true');
+        const userField = document.getElementById('edit-username');
+        const passLabel = document.getElementById('label-pass-modal');
+        const accessLabel = document.getElementById('label-acceso-modal');
+        const btnGen = document.getElementById('btn-gen-modal');
+        if (hasUser) {
+            userField.value = data.username;
+            userField.readOnly = false;
+            userField.style.background = '#fff';
+            passLabel.textContent = "Cambiar Contraseña";
+            accessLabel.textContent = "Credenciales Existentes";
+            btnGen.style.display = 'flex';
+        } else {
+            userField.value = '';
+            userField.readOnly = false;
+            userField.style.background = '#fff';
+            passLabel.textContent = "Contraseña Temporal";
+            accessLabel.textContent = "Habilitar Nuevo Acceso";
+            btnGen.style.display = 'flex';
+        }
+        document.getElementById('edit-password').value = '';
+        document.getElementById('modal-editar').classList.add('visible');
+    }
+
+    function sugerirCredencialesModal() {
+        const name = document.getElementById('edit-nombre').value;
+        if (!name) return;
+        document.getElementById('edit-username').value = generateSlug(name);
+        document.getElementById('edit-password').value = generatePass();
+    }
+
+    function generateSlug(text) {
+        return text.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, '_').replace(/__+/g, '_').substring(0, 30);
+    }
+
+    function generatePass() {
+        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let pass = "";
+        for (let i = 0; i < 8; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+        return pass;
+    }
+
+    function cerrarModalEditar() { document.getElementById('modal-editar').classList.remove('visible'); }
+
+    setupSearch('edit-ciudad-search', 'edit-lista-ciudades', 'edit-ciudad-id', '/api/buscar-ciudades/');
+
+    function confirmarEliminacion(id, nombre) {
+        document.getElementById('modal-cliente-id').value = id;
+        document.getElementById('modal-nombre-cliente').textContent = nombre;
+        document.getElementById('modal-eliminar').classList.add('visible');
+    }
+
+    function cerrarModal() { document.getElementById('modal-eliminar').classList.remove('visible'); }
+
+    window.addEventListener('click', function(e) {
+        if (e.target === document.getElementById('modal-eliminar')) cerrarModal();
+        if (e.target === document.getElementById('modal-editar')) cerrarModalEditar();
+        if (e.target === document.getElementById('modal-editar-usuario')) cerrarModalEditarUsuario();
+        if (e.target === document.getElementById('modal-eliminar-usuario')) cerrarModalUsuario();
+    });
+
+    function submitRowAjax(clienteId, action, userId = '') {
+        const userInp = document.getElementById('inline-user-' + clienteId);
+        const passInp = document.getElementById('inline-pass-' + clienteId);
+        const btn = document.getElementById('btn-save-row-' + clienteId);
+        const icon = btn.querySelector('i');
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        formData.append('action', action);
+        formData.append('cliente_id', clienteId);
+        formData.append('is_ajax', '1');
+        if (action === 'crear') {
+            if (!userInp.value || !passInp.value) { alert('Debe ingresar usuario y contraseña'); return; }
+            formData.append('username', userInp.value);
+            formData.append('password', passInp.value);
+        } else if (action === 'cambiar_password') {
+            if (!passInp.value) { alert('Ingrese la nueva contraseña'); return; }
+            formData.append('user_id', userId);
+            formData.append('new_password', passInp.value);
+        }
+        const oldIconClass = icon.className;
+        icon.className = 'fa-solid fa-spinner fa-spin';
+        btn.disabled = true;
+        fetch(window.location.href, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(res => res.json())
+        .then(data => {
+            if (data.tipo === 'exito') {
+                const row = btn.closest('tr');
+                row.classList.add('success-flash');
+                setTimeout(() => row.classList.remove('success-flash'), 2000);
+                if (action === 'crear') {
+                    const userDisplay = document.getElementById('user-display-' + clienteId);
+                    userDisplay.outerHTML = `<span class="user-tag" id="user-display-${clienteId}"><i class="fa-solid fa-user-check"></i> ${userInp.value}</span>`;
+                    const statusContainer = document.getElementById('status-container-' + clienteId);
+                    statusContainer.innerHTML = `<span class="status-badge active">Habilitado</span>`;
+                    btn.setAttribute('onclick', `submitRowAjax('${clienteId}', 'cambiar_password', 'pending_reload')`);
+                    passInp.placeholder = 'Cambiar clave...';
+                }
+                passInp.value = '';
+            } else {
+                alert("Error: " + data.texto);
+            }
+        })
+        .catch(err => { console.error(err); alert("Error de conexión"); })
+        .finally(() => { icon.className = oldIconClass; btn.disabled = false; });
+    }
+
+    // ═══════ TABLA USUARIOS: FILTRO + PAGINACIÓN ═══════
+    const USERS_PER_PAGE = 25;
+    let usersCurrentPage = 1;
+    let usersAllRows = [];
+    let usersFilteredRows = [];
+
+    function initUsersTable() {
+        const table = document.getElementById('usersTable');
+        if (!table) return;
+        usersAllRows = Array.from(table.querySelectorAll('tbody tr'));
+        usersFilteredRows = [...usersAllRows];
+        renderUsersPage(1);
+    }
+
+    function filterUsersTable() {
+        const query = document.getElementById('usersSearch').value.toUpperCase();
+        usersFilteredRows = usersAllRows.filter(row => row.innerText.toUpperCase().includes(query));
+        renderUsersPage(1);
+    }
+
+    function renderUsersPage(page) {
+        usersCurrentPage = page;
+        const start = (page - 1) * USERS_PER_PAGE;
+        const end = start + USERS_PER_PAGE;
+        usersAllRows.forEach(row => row.style.display = 'none');
+        usersFilteredRows.slice(start, end).forEach(row => row.style.display = '');
+        const total = usersFilteredRows.length;
+        const counter = document.getElementById('users-table-counter');
+        if (counter) counter.textContent = `${total} usuario${total !== 1 ? 's' : ''} — mostrando ${Math.min(start+1, total)}–${Math.min(end, total)}`;
+        renderUsersPagination(Math.ceil(total / USERS_PER_PAGE));
+    }
+
+    function renderUsersPagination(totalPages) {
+        const info = document.getElementById('users-pagination-info');
+        const controls = document.getElementById('users-pagination-controls');
+        if (!controls) return;
+        if (totalPages <= 1) { info.textContent = ''; controls.innerHTML = ''; return; }
+        info.textContent = `Página ${usersCurrentPage} de ${totalPages}`;
+        controls.innerHTML = '';
+        const btnStyle = (active) => `width:32px; height:32px; border:1.5px solid ${active ? '#1e40af' : 'var(--border)'}; background:${active ? '#1e40af' : 'white'}; color:${active ? 'white' : 'var(--text-muted)'}; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; transition:all 0.2s;`;
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            btn.style.cssText = btnStyle(i === usersCurrentPage);
+            btn.onclick = () => renderUsersPage(i);
+            controls.appendChild(btn);
+        }
+    }
+
+    // ═══════ MODAL EDITAR USUARIO ═══════
+    function abrirModalEditarUsuario(data) {
+        document.getElementById('edituser-id').value = data.id;
+        document.getElementById('edituser-firstname').value = data.first_name;
+        document.getElementById('edituser-lastname').value = data.last_name;
+        document.getElementById('edituser-email').value = data.email;
+        document.getElementById('edituser-telefono').value = data.telefono || '';
+        document.getElementById('edituser-username').value = data.username;
+        document.getElementById('edituser-rol').value = data.rol;
+        document.getElementById('edituser-regional').value = data.regional;
+        document.getElementById('edituser-password').value = '';
+        toggleRegionalField('edit');
+        document.getElementById('modal-editar-usuario').classList.add('visible');
+    }
+
+    function cerrarModalEditarUsuario() { document.getElementById('modal-editar-usuario').classList.remove('visible'); }
+
+    // ═══════ MODAL ELIMINAR USUARIO ═══════
+    function confirmarEliminacionUsuario(id, nombre) {
+        document.getElementById('modal-usuario-id').value = id;
+        document.getElementById('modal-nombre-usuario').textContent = nombre;
+        document.getElementById('modal-eliminar-usuario').classList.add('visible');
+    }
+
+    function cerrarModalUsuario() { document.getElementById('modal-eliminar-usuario').classList.remove('visible'); }
+
+    // ═══════ TOGGLE REGIONAL FIELD ═══════
+    function toggleRegionalField(prefix) {
+        const rolSelect = document.getElementById(prefix === 'nuevo' ? 'nuevo-user-rol' : 'edituser-rol');
+        const regionalGroup = document.getElementById(prefix === 'nuevo' ? 'nuevo-regional-group' : 'edit-regional-group');
+        if (rolSelect.value === 'director_regional') {
+            regionalGroup.style.opacity = '1';
+            regionalGroup.querySelector('select').required = true;
+        } else {
+            regionalGroup.style.opacity = '0.6';
+            regionalGroup.querySelector('select').required = false;
+        }
+    }
+
+    // ═══════ SUGERIR CREDENCIALES USUARIO ═══════
+    function sugerirCredencialesUsuario() {
+        const firstName = document.querySelector('#drawer-usuarios input[name="first_name"]').value;
+        const lastName = document.querySelector('#drawer-usuarios input[name="last_name"]').value;
+        const fullName = (firstName + '.' + lastName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9.]/g, '').substring(0, 30);
+        document.getElementById('nuevo-user-username').value = fullName || 'usuario_nuevo';
+        document.getElementById('nuevo-user-password').value = generatePass();
+    }
+</script>
+{% endblock %}

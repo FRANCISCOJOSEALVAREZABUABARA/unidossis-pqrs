@@ -1,0 +1,396 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+
+{% block title %}PQRS #{{ ticket.ticket_id }} | UNIDOSSIS{% endblock %}
+
+
+
+{% block content %}
+    <a href="{% url 'dashboard' %}" class="back-btn">
+        <i class="fa-solid fa-arrow-left"></i> Volver al dashboard
+    </a>
+
+    <!-- Header del ticket -->
+    <div class="ticket-header">
+        <div style="flex:1">
+            <h1>{{ ticket.asunto }}</h1>
+            <div class="ticket-meta-row">
+                <span class="meta-chip"><i class="fa-solid fa-hashtag"></i> <strong>{{ ticket.ticket_id }}</strong></span>
+                <span class="meta-chip"><i class="fa-solid fa-user"></i> {{ ticket.remitente_nombre|default:"Sin nombre" }}</span>
+                <span class="meta-chip"><i class="fa-solid fa-envelope"></i> {{ ticket.remitente_email }}</span>
+                <span class="meta-chip"><i class="fa-solid fa-calendar"></i> {{ ticket.fecha_ingreso|date:"d M, Y H:i" }}</span>
+                {% if ticket.entidad_cliente %}
+                <span class="meta-chip"><i class="fa-solid fa-hospital"></i> {{ ticket.entidad_cliente }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+            <span class="badge badge-{{ ticket.estado }}">
+                <i class="fa-solid fa-circle" style="font-size:8px;"></i>
+                {{ ticket.get_estado_display }}
+            </span>
+            {% if ticket.criticidad %}
+            <span class="badge badge-{{ ticket.criticidad }}">{{ ticket.get_criticidad_display }}</span>
+            {% endif %}
+            {% with sla=ticket.estado_sla %}
+            <span class="sla-pill sla-{{ sla }}">
+                SLA: {{ ticket.dias_transcurridos }} día{{ ticket.dias_transcurridos|pluralize }}
+                {% if sla == 'bien' %}✅{% elif sla == 'peligro' %}⚠️{% elif sla == 'vencido' %}🚨{% endif %}
+            </span>
+            {% endwith %}
+        </div>
+    </div>
+
+    <div class="detail-grid">
+        <!-- Columna izquierda -->
+        <div>
+            <!-- Mensaje principal -->
+            <div class="panel">
+                <div class="panel-title"><i class="fa-solid fa-message"></i> Descripción del Caso</div>
+                <div class="message-box">{{ ticket.cuerpo }}</div>
+            </div>
+
+            <!-- Análisis IA -->
+            {% if ticket.analisis_ia %}
+            <div class="panel">
+                <div class="panel-title"><i class="fa-solid fa-robot"></i> Análisis UNIDOSSIS IA</div>
+                <div class="ia-box">
+                    <div class="ia-header">
+                        <div class="ia-title"><i class="fa-solid fa-sparkles"></i> Clasificación automática con aprendizaje</div>
+                        {% if perfil.rol != 'cliente' %}
+                        <button class="btn-reclasificar" onclick="abrirModalReclasificacion()" id="btn-reclasificar-ia">
+                            <i class="fa-solid fa-sync"></i> Reclasificar
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div class="ia-text">{{ ticket.analisis_ia }}</div>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-top:4px;">
+                    {% if ticket.linea_servicio %}
+                    <div style="background:var(--bg); border-radius:10px; padding:10px; text-align:center;">
+                        <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Línea</div>
+                        <div style="font-size:12px; font-weight:600; margin-top:4px;">{{ ticket.get_linea_servicio_display }}</div>
+                    </div>
+                    {% endif %}
+                    {% if ticket.proceso %}
+                    <div style="background:var(--bg); border-radius:10px; padding:10px; text-align:center;">
+                        <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Proceso</div>
+                        <div style="font-size:12px; font-weight:600; margin-top:4px;">{{ ticket.get_proceso_display }}</div>
+                    </div>
+                    {% endif %}
+                    {% if ticket.tipificacion %}
+                    <div style="background:var(--bg); border-radius:10px; padding:10px; text-align:center;">
+                        <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Tipificación</div>
+                        <div style="font-size:12px; font-weight:600; margin-top:4px;">{{ ticket.get_tipificacion_display }}</div>
+                    </div>
+                    {% endif %}
+                    {% if ticket.regional %}
+                    <div style="background:var(--bg); border-radius:10px; padding:10px; text-align:center;">
+                        <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Regional</div>
+                        <div style="font-size:12px; font-weight:600; margin-top:4px;">{{ ticket.get_regional_display }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Adjuntos del cliente -->
+            {% if adjuntos_cliente %}
+            <div class="panel">
+                <div class="panel-title"><i class="fa-solid fa-paperclip"></i> Evidencias del Cliente</div>
+                {% for adj in adjuntos_cliente %}
+                <a href="{{ adj.archivo.url }}" target="_blank" class="attachment-item">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span style="flex:1; font-size:13px;">{{ adj.archivo.name|slice:"10:" }}</span>
+                    <i class="fa-solid fa-download" style="color:var(--text-muted); font-size:13px;"></i>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Hilo de comentarios -->
+            <div class="panel">
+                <div class="panel-title"><i class="fa-solid fa-comments"></i> Hilo de Comentarios Internos</div>
+                <div class="comment-thread" id="comment-thread">
+                    {% for c in comentarios %}
+                    <div class="comment-item comment-{{ c.visibilidad }}">
+                        <div class="comment-meta">
+                            <div class="comment-author">{{ c.autor.get_full_name|default:c.autor.username|default:"Sistema" }}</div>
+                            <div class="comment-date">{{ c.fecha|date:"d/m/Y H:i" }}</div>
+                            <span class="comment-vis vis-{{ c.visibilidad }}">
+                                {% if c.visibilidad == 'interno' %}🔒 Interno{% else %}👁️ Visible al cliente{% endif %}
+                            </span>
+                        </div>
+                        <div class="comment-text">{{ c.texto }}</div>
+                    </div>
+                    {% empty %}
+                    <p style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px;">No hay comentarios aún.</p>
+                    {% endfor %}
+                </div>
+
+                {% if perfil.rol != 'cliente' %}
+                <div class="comment-input-area" id="comment-form">
+                    <textarea id="new-comment-text" placeholder="Escribe un comentario interno o una nota para el cliente..."></textarea>
+                    <div class="comment-controls">
+                        <div class="vis-toggle">
+                            <button class="vis-btn active-interno" id="btn-vis-interno" onclick="setVisibilidad('interno')">🔒 Interno</button>
+                            <button class="vis-btn" id="btn-vis-publico" onclick="setVisibilidad('publico')">👁️ Visible al cliente</button>
+                        </div>
+                        <button class="btn-send-comment" onclick="enviarComentario('{{ ticket.ticket_id }}')">
+                            <i class="fa-solid fa-paper-plane"></i> Enviar
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Log de actividad -->
+            {% if logs %}
+            <div class="panel">
+                <div class="panel-title"><i class="fa-solid fa-clock-rotate-left"></i> Historial de Actividad</div>
+                {% for log in logs %}
+                <div class="log-item">
+                    <div class="log-icon"><i class="fa-solid fa-circle-dot"></i></div>
+                    <div style="flex:1;">
+                        <div class="log-accion">{{ log.accion }}</div>
+                        {% if log.detalle %}<div class="log-detalle">{{ log.detalle }}</div>{% endif %}
+                        <div class="log-fecha">
+                            {{ log.fecha|date:"d/m/Y H:i" }}
+                            {% if log.usuario %} · {{ log.usuario.get_full_name|default:log.usuario.username }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Columna derecha: gestor -->
+        {% if perfil.rol != 'cliente' %}
+        <div>
+            <div class="management-panel">
+                <div class="panel-title"><i class="fa-solid fa-sliders"></i> Gestión del Caso</div>
+                <form method="POST" enctype="multipart/form-data" id="management-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label>Estado del Caso</label>
+                        <select name="nuevo_estado" class="form-control">
+                            {% for k, v in STATUS_CHOICES %}
+                            <option value="{{ k }}" {% if ticket.estado == k %}selected{% endif %}>{{ v }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Personal Asignado</label>
+                        <input type="text" name="responsable" class="form-control" value="{{ ticket.responsable|default:'' }}" placeholder="Nombre del responsable">
+                    </div>
+                    <div class="form-group">
+                        <label>Área / Proceso</label>
+                        <select name="proceso" class="form-control">
+                            <option value="">— Sin asignar —</option>
+                            {% for k, v in AREA_CHOICES %}
+                            <option value="{{ k }}" {% if ticket.proceso == k %}selected{% endif %}>{{ v }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipificación</label>
+                        <select name="tipificacion" class="form-control">
+                            <option value="">— Sin asignar —</option>
+                            {% for k, v in TIPIFICACION_CHOICES %}
+                            <option value="{{ k }}" {% if ticket.tipificacion == k %}selected{% endif %}>{{ v }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nivel de Criticidad</label>
+                        <select name="criticidad" class="form-control">
+                            <option value="">— Sin asignar —</option>
+                            {% for k, v in CRITICIDAD_CHOICES %}
+                            <option value="{{ k }}" {% if ticket.criticidad == k %}selected{% endif %}>{{ v }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Respuesta Oficial</label>
+                        <textarea name="respuesta_oficial" class="form-control" rows="6" placeholder="Escribe la respuesta formal para el cliente...">{{ ticket.respuesta_oficial|default:'' }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Adjuntar Documento de Respuesta</label>
+                        <input type="file" name="archivos_agente" multiple class="form-control" style="font-size:12px; padding:8px;">
+                    </div>
+                    {% if adjuntos_unidossis %}
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:8px;">Respuestas Adjuntas</label>
+                        {% for adj in adjuntos_unidossis %}
+                        <a href="{{ adj.archivo.url }}" target="_blank" class="attachment-item">
+                            <i class="fa-solid fa-file" style="font-size:14px;"></i>
+                            <span style="font-size:12px; flex:1;">{{ adj.archivo.name|slice:"10:" }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn-save">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+                    </button>
+                    <button type="submit" name="cerrar_y_enviar" class="btn-close-ticket" onclick="return confirm('¿Confirma el cierre de este caso? Se enviará la respuesta y encuesta CSAT al cliente.')">
+                        <i class="fa-solid fa-check-circle"></i> Cerrar y Notificar al Cliente
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block page_js %}
+<!-- Modal Reclasificación IA -->
+<div class="modal-overlay" id="modal-reclasificacion">
+    <div class="modal-box">
+        <div class="modal-title">
+            <i class="fa-solid fa-robot" style="color:var(--accent);"></i>
+            Reclasificación con IA
+        </div>
+        <div id="modal-loading" style="text-align:center; padding:30px;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:30px; color:var(--accent);"></i>
+            <p style="margin-top:12px; color:var(--text-muted);">Analizando el caso con UNIDOSSIS IA...</p>
+        </div>
+        <div id="modal-resultado" style="display:none;">
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">La IA sugiere la siguiente clasificación. Puedes ajustarla antes de aplicar.</p>
+            <div class="modal-grid">
+                <div class="form-group">
+                    <label>Línea</label>
+                    <select id="modal-linea" class="form-control" style="font-size:13px; padding:9px;">
+                        {% for k,v in LINEA_CHOICES %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Proceso</label>
+                    <select id="modal-proceso" class="form-control" style="font-size:13px; padding:9px;">
+                        {% for k,v in AREA_CHOICES %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipificación</label>
+                    <select id="modal-tipificacion" class="form-control" style="font-size:13px; padding:9px;">
+                        {% for k,v in TIPIFICACION_CHOICES %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Criticidad</label>
+                    <select id="modal-criticidad" class="form-control" style="font-size:13px; padding:9px;">
+                        {% for k,v in CRITICIDAD_CHOICES %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Análisis IA</label>
+                <textarea id="modal-analisis" class="form-control" style="font-size:13px;" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Observación (opcional)</label>
+                <input type="text" id="modal-observacion" class="form-control" style="font-size:13px;" placeholder="Razón del ajuste manual...">
+            </div>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+            <button class="btn-cancel-modal" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn-apply-modal" id="btn-apply-ia" onclick="aplicarReclasificacion('{{ ticket.ticket_id }}')" style="display:none;">
+                <i class="fa-solid fa-check"></i> Aplicar y Guardar Feedback
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CSRF = '{{ csrf_token }}';
+    let visibilidadActual = 'interno';
+
+    function setVisibilidad(v) {
+        visibilidadActual = v;
+        document.getElementById('btn-vis-interno').className = 'vis-btn' + (v === 'interno' ? ' active-interno' : '');
+        document.getElementById('btn-vis-publico').className = 'vis-btn' + (v === 'publico' ? ' active-publico' : '');
+    }
+
+    function enviarComentario(ticketId) {
+        const texto = document.getElementById('new-comment-text').value.trim();
+        if (!texto) return;
+        fetch(`/api/ticket/${ticketId}/comentario/`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({texto, visibilidad: visibilidadActual})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                const c = data.comentario;
+                const div = document.createElement('div');
+                div.className = `comment-item comment-${c.visibilidad}`;
+                div.innerHTML = `
+                    <div class="comment-meta">
+                        <div class="comment-author">${c.autor}</div>
+                        <div class="comment-date">${c.fecha}</div>
+                        <span class="comment-vis vis-${c.visibilidad}">
+                            ${c.visibilidad === 'interno' ? '🔒 Interno' : '👁️ Visible al cliente'}
+                        </span>
+                    </div>
+                    <div class="comment-text">${c.texto}</div>`;
+                const thread = document.getElementById('comment-thread');
+                const empty = thread.querySelector('p');
+                if (empty) empty.remove();
+                thread.appendChild(div);
+                thread.scrollTop = thread.scrollHeight;
+                document.getElementById('new-comment-text').value = '';
+            }
+        });
+    }
+
+    function abrirModalReclasificacion() {
+        document.getElementById('modal-reclasificacion').classList.add('show');
+        document.getElementById('modal-loading').style.display = 'block';
+        document.getElementById('modal-resultado').style.display = 'none';
+        document.getElementById('btn-apply-ia').style.display = 'none';
+
+        fetch('/api/ticket/{{ ticket.ticket_id }}/reclasificar/')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('modal-loading').style.display = 'none';
+            if (data.ok) {
+                const c = data.clasificacion;
+                document.getElementById('modal-linea').value = c.linea || '';
+                document.getElementById('modal-proceso').value = c.proceso || '';
+                document.getElementById('modal-tipificacion').value = c.tipificacion || '';
+                document.getElementById('modal-criticidad').value = c.criticidad || '';
+                document.getElementById('modal-analisis').value = c.analisis_ia || '';
+                document.getElementById('modal-resultado').style.display = 'block';
+                document.getElementById('btn-apply-ia').style.display = 'flex';
+            } else {
+                alert('La IA no está disponible en este momento.');
+                cerrarModal();
+            }
+        })
+        .catch(() => { cerrarModal(); alert('Error de conexión con el motor IA.'); });
+    }
+
+    function cerrarModal() {
+        document.getElementById('modal-reclasificacion').classList.remove('show');
+    }
+
+    function aplicarReclasificacion(ticketId) {
+        const payload = {
+            linea: document.getElementById('modal-linea').value,
+            proceso: document.getElementById('modal-proceso').value,
+            tipificacion: document.getElementById('modal-tipificacion').value,
+            criticidad: document.getElementById('modal-criticidad').value,
+            analisis_ia: document.getElementById('modal-analisis').value,
+            observacion: document.getElementById('modal-observacion').value,
+        };
+        fetch(`/api/ticket/${ticketId}/aplicar-reclasificacion/`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => { if (data.ok) { cerrarModal(); location.reload(); } });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,75 @@
+# ─── Entorno Virtual Python ─────────────────────────────
+venv/
+env/
+.env/
+.venv/
+
+# ─── Variables de entorno (¡MUY IMPORTANTE! nunca subir) ─
+.env
+*.env
+secrets.py
+
+# ─── Base de datos local ──────────────────────────────────
+*.sqlite3
+*.db
+
+# ─── Archivos de Python compilados ───────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.pyc
+
+# ─── Archivos estáticos generados ────────────────────────
+staticfiles/
+collected_static/
+
+# ─── Archivos de media subidos por usuarios ──────────────
+media/
+# (descomentar si quieres excluir las imágenes subidas:)
+# /unidossis_pqrs/media/
+
+# ─── Logs del sistema ────────────────────────────────────
+*.log
+logs/*.log
+
+# ─── Archivos de Windows ─────────────────────────────────
+Thumbs.db
+Desktop.ini
+*.lnk
+
+# ─── IDEs y editores ─────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+
+# ─── Archivos temporales ─────────────────────────────────
+*.tmp
+*.temp
+~$*
+
+# ─── Node.js (si se usa en el futuro) ────────────────────
+node_modules/
+npm-debug.log*
+
+# ─── Distribución / empaquetado ──────────────────────────
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# ─── Pytest / testing ────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ─── Archivos Excel con datos reales (privacidad) ────────
+# Descomenta si no quieres subir los Excel con info de clientes:
+# *.xlsx
+# *.xls
+
+# ─── Gemini / AI context ─────────────────────────────────
+.gemini/

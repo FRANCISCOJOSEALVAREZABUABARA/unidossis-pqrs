@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PQRS Radicada Exitosamente | Unidossis</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; color: #1e293b; }
+        .success-card { background: white; padding: 50px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 500px; width: 90%; }
+        .icon-circle { width: 80px; height: 80px; background: #dcfce7; color: #16a34a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 24px; }
+        h1 { font-size: 24px; font-weight: 700; margin-bottom: 12px; color: #1e3a8a; }
+        p { color: #64748b; margin-bottom: 30px; line-height: 1.5; }
+        
+        .ticket-id-box { background: #f1f5f9; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px dashed #cbd5e1; }
+        .ticket-id-box span { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; }
+        .ticket-id-box strong { font-size: 28px; font-weight: 800; color: #1e3a8a; letter-spacing: 2px; }
+
+        .btn { display: inline-block; padding: 14px 28px; background: #1e3a8a; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.3s; }
+        .btn:hover { background: #172554; transform: translateY(-1px); }
+        
+        .footer-logo { margin-top: 40px; height: 35px; }
+    </style>
+</head>
+<body>
+    <div class="success-card">
+        <div class="icon-circle">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <h1>¡Radicado Exitoso!</h1>
+        <p>Su solicitud ha sido recibida y será procesada por nuestro equipo de Calidad bajo la normativa vigente.</p>
+        
+        <div class="ticket-id-box">
+            <span>Número de Seguimiento</span>
+            <strong>{{ ticket.ticket_id }}</strong>
+        </div>
+
+        <p style="font-size: 13px;">Se ha enviado un acuse de recibo a su correo <b>{{ ticket.remitente_email }}</b>.</p>
+
+        <a href="{% url 'public_portal' %}" class="btn">Radicar otra PQRS</a>
+        
+        <br>
+        <img src="{% static 'tickets/img/LOGOSVG.svg' %}" alt="Unidossis" class="footer-logo">
+    </div>
+</body>
+</html>

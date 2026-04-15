@@ -1,0 +1,52 @@
+{% extends "tickets/base.html" %}
+{% load static %}
+
+{% block body %}
+<div class="app-container">
+    <!-- ═══════ SIDEBAR CLIENTE ═══════ -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo-wrap">
+                <img src="{% static 'tickets/img/LOGOSVG.svg' %}" alt="Unidossis">
+            </div>
+        </div>
+
+        <div class="nav-menu">
+            <a href="{% url 'portal_cliente_dashboard' %}" class="nav-item {% if nav_active == 'mis_pqrs' %}active{% endif %}">
+                <i class="fa-solid fa-house"></i>
+                <span>Mis PQRS</span>
+            </a>
+            <a href="{% url 'public_portal' %}" class="nav-item {% if nav_active == 'radicar' %}active{% endif %}">
+                <i class="fa-solid fa-plus"></i>
+                <span>Radicar Caso</span>
+            </a>
+        </div>
+
+        <!-- User Info -->
+        <div class="sidebar-user">
+            <div class="user-avatar">
+                <i class="fa-solid fa-building" style="font-size:14px;"></i>
+            </div>
+            <div class="user-info">
+                <div class="user-name">{{ cliente.nombre|default:request.user.username|truncatechars:25 }}</div>
+                <div class="user-role">Portal Institucional</div>
+            </div>
+        </div>
+
+        <!-- Logout -->
+        <div class="nav-footer">
+            <a href="{% url 'logout' %}" class="nav-item logout">
+                <i class="fa-solid fa-power-off"></i>
+                <span>Cerrar Sesión</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ═══════ MAIN CONTENT ═══════ -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+{% block page_js %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "tickets/base_cliente.html" %}
+{% load static %}
+
+{% block title %}PQRS #{{ ticket.ticket_id }} | UNIDOSSIS{% endblock %}
+
+
+{% block content %}
+    <a href="{% url 'portal_cliente_dashboard' %}" class="back-btn">
+        <i class="fa-solid fa-arrow-left"></i> Volver al listado
+    </a>
+
+    <div class="card" style="background:white; border-radius:24px; padding:40px; box-shadow:0 10px 25px rgba(0,0,0,0.02);">
+        <div class="header-status">
+            <div>
+                <span class="section-title">Detalle de Solicitud</span>
+                <div class="ticket-id">{{ ticket.ticket_id }}</div>
+                <div style="font-size: 14px; color: var(--text-muted); margin-top: 5px;">Radicado el {{ ticket.fecha_ingreso|date:"d M, Y h:i A" }}</div>
+            </div>
+            <span class="status-pill status-{{ ticket.estado }}">{{ ticket.get_estado_display }}</span>
+        </div>
+
+        <span class="section-title">Asunto</span>
+        <h2 style="margin-bottom: 25px;">{{ ticket.asunto }}</h2>
+
+        <span class="section-title">Descripción enviada</span>
+        <div class="content-body">{{ ticket.cuerpo }}</div>
+
+        {% if ticket.respuesta_oficial %}
+        <span class="section-title">Seguimiento</span>
+        <div class="response-box">
+            {{ ticket.respuesta_oficial }}
+
+            {% if adjuntos_unidossis %}
+            <div style="margin-top: 25px; border-top: 1px solid #dbeafe; padding-top: 20px;">
+                <span style="font-size: 11px; font-weight: 700; color: var(--accent);">ANEXOS ADJUNTOS POR UNIDOSSIS:</span>
+                {% for adj in adjuntos_unidossis %}
+                <a href="{{ adj.archivo.url }}" target="_blank" class="attachment-card">
+                    <i class="fa-solid fa-file-circle-check" style="color: var(--accent); font-size: 20px;"></i>
+                    <span style="flex: 1; font-weight: 600; font-size: 13px;">{{ adj.archivo.name|slice:"15:" }}</span>
+                    <i class="fa-solid fa-download" style="color: var(--text-muted);"></i>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div style="padding: 20px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 15px; color: #92400e; font-size: 14px;">
+            <i class="fa-solid fa-hourglass-half"></i> Su solicitud está siendo analizada por nuestro equipo técnico. Le notificaremos por correo electrónico cuando haya una respuesta oficial.
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

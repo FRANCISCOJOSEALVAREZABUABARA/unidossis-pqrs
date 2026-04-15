@@ -1,0 +1,262 @@
+{% extends "tickets/base.html" %}
+{% load static %}
+
+{% block body %}
+<div class="app-container">
+    <!-- ═══════ SIDEBAR ADMIN UNIFICADO ═══════ -->
+    <aside class="sidebar" id="mainSidebar">
+        <div class="sidebar-toggle" onclick="toggleSidebar()">
+            <i class="fa-solid fa-chevron-left"></i>
+        </div>
+
+        <div class="brand">
+            <div class="logo-wrap">
+                <img src="{% static 'tickets/img/LOGOSVG.svg' %}" alt="Unidossis">
+            </div>
+        </div>
+
+        <div class="nav-menu">
+            <!-- Principal -->
+            <a href="{% url 'dashboard' %}" class="nav-item {% if nav_active == 'dashboard' %}active{% endif %}">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <!-- Gestión (visible para superadmin y admin) -->
+            {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' %}
+            <div class="nav-section-label">Gestión</div>
+            <a href="{% url 'gestionar_clientes' %}" class="nav-item {% if nav_active == 'clientes' %}active{% endif %}">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>Clientes y Usuarios</span>
+            </a>
+            {% endif %}
+
+            <!-- Analítica (visible para superadmin, admin y director) -->
+            {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' or perfil.rol == 'director_regional' %}
+            <div class="nav-section-label">Analítica</div>
+            <a href="{% url 'reportes' %}" class="nav-item {% if nav_active == 'reportes' %}active{% endif %}">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Reportes & Analytics</span>
+            </a>
+            {% endif %}
+
+            <!-- Configuración (solo superadmin y admin) -->
+            {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' %}
+            <div class="nav-section-label">Configuración</div>
+            <a href="{% url 'configurar_sla' %}" class="nav-item {% if nav_active == 'sla' %}active{% endif %}">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Configurar SLA</span>
+            </a>
+            {% endif %}
+            {% if perfil.rol == 'superadmin' %}
+            <a href="/admin/" class="nav-item">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+                <span>Admin Django</span>
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- User Info -->
+        <div class="sidebar-user">
+            <div class="user-avatar">
+                {{ request.user.first_name|default:request.user.username|truncatechars:1|upper }}
+            </div>
+            <div class="user-info">
+                <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                <div class="user-role">{{ perfil.get_rol_display|default:"Staff" }}</div>
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="nav-footer">
+            <a href="javascript:void(0)" onclick="document.getElementById('modal-cambiar-password').classList.add('visible')" class="nav-item" style="color:var(--text-muted);">
+                <i class="fa-solid fa-key"></i>
+                <span>Cambiar Contraseña</span>
+            </a>
+            <a href="{% url 'logout' %}" class="nav-item logout">
+                <i class="fa-solid fa-power-off"></i>
+                <span>Cerrar Sesión</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ═══════ MAIN CONTENT ═══════ -->
+    <main class="main-content" id="mainContent">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<!-- ═══════ MODAL: CAMBIAR CONTRASEÑA ═══════ -->
+<div class="modal-overlay" id="modal-cambiar-password">
+    <div class="modal" style="max-width:440px; border-radius:24px;">
+        <div class="modal-header" style="padding:25px 30px 15px;">
+            <h3 style="margin:0; font-size:17px; display:flex; align-items:center; gap:10px;">
+                <span style="width:36px; height:36px; background:#EFF6FF; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-solid fa-shield-halved" style="color:#1e40af; font-size:15px;"></i>
+                </span>
+                Cambiar Contraseña
+            </h3>
+            <button class="btn btn-outline btn-sm" onclick="cerrarModalPassword()" style="width:32px; height:32px; padding:0; border-radius:50%;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="form-cambiar-password" autocomplete="off" style="display:flex; flex-direction:column;">
+            <div class="modal-body" style="padding:15px 30px 25px; display:flex; flex-direction:column; gap:16px;">
+                <div id="password-feedback" style="display:none; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:600;"></div>
+                <div class="form-group" style="margin:0;">
+                    <label>Contraseña Actual</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="pwd-current" placeholder="Ingrese su contraseña actual" required autocomplete="current-password">
+                    </div>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Nueva Contraseña</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-key"></i>
+                        <input type="password" id="pwd-new" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" oninput="checkPasswordStrength(this.value)">
+                    </div>
+                    <div id="pwd-strength-bar" style="height:4px; border-radius:2px; margin-top:6px; background:var(--border-light); overflow:hidden; transition:all 0.3s;">
+                        <div id="pwd-strength-fill" style="height:100%; width:0; border-radius:2px; transition:all 0.3s;"></div>
+                    </div>
+                    <span id="pwd-strength-text" style="font-size:11px; color:var(--text-faint); margin-top:2px;"></span>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Confirmar Nueva Contraseña</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-check-double"></i>
+                        <input type="password" id="pwd-confirm" placeholder="Repita la nueva contraseña" required autocomplete="new-password">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:15px 30px 25px;">
+                <button type="button" class="btn btn-outline" onclick="cerrarModalPassword()">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary" id="btn-submit-password" style="min-width:180px; background:#1e40af;">
+                    <i class="fa-solid fa-shield-check"></i> Actualizar Contraseña
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // ═══════ SIDEBAR TOGGLE ═══════
+    function toggleSidebar() {
+        const sidebar = document.getElementById('mainSidebar');
+        const content = document.getElementById('mainContent');
+        sidebar.classList.toggle('collapsed');
+        content.classList.toggle('sidebar-collapsed');
+        document.body.classList.toggle('sidebar-col');
+    }
+
+    // ═══════ CAMBIAR CONTRASEÑA ═══════
+    function cerrarModalPassword() {
+        document.getElementById('modal-cambiar-password').classList.remove('visible');
+        document.getElementById('form-cambiar-password').reset();
+        document.getElementById('password-feedback').style.display = 'none';
+        document.getElementById('pwd-strength-fill').style.width = '0';
+        document.getElementById('pwd-strength-text').textContent = '';
+    }
+
+    function checkPasswordStrength(pwd) {
+        const fill = document.getElementById('pwd-strength-fill');
+        const text = document.getElementById('pwd-strength-text');
+        let score = 0;
+        if (pwd.length >= 8) score++;
+        if (pwd.length >= 12) score++;
+        if (/[A-Z]/.test(pwd)) score++;
+        if (/[0-9]/.test(pwd)) score++;
+        if (/[^A-Za-z0-9]/.test(pwd)) score++;
+        const levels = [
+            { w: '0%', c: 'var(--border)', t: '' },
+            { w: '20%', c: 'var(--danger)', t: 'Muy débil' },
+            { w: '40%', c: '#f97316', t: 'Débil' },
+            { w: '60%', c: 'var(--warning)', t: 'Aceptable' },
+            { w: '80%', c: '#22c55e', t: 'Buena' },
+            { w: '100%', c: 'var(--success)', t: 'Excelente' },
+        ];
+        const level = levels[Math.min(score, 5)];
+        fill.style.width = level.w;
+        fill.style.background = level.c;
+        text.textContent = level.t;
+        text.style.color = level.c;
+    }
+
+    document.getElementById('form-cambiar-password').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const feedback = document.getElementById('password-feedback');
+        const btn = document.getElementById('btn-submit-password');
+        const currentPwd = document.getElementById('pwd-current').value;
+        const newPwd = document.getElementById('pwd-new').value;
+        const confirmPwd = document.getElementById('pwd-confirm').value;
+
+        if (newPwd.length < 8) {
+            feedback.style.display = 'block';
+            feedback.style.background = '#FEF2F2';
+            feedback.style.color = '#dc2626';
+            feedback.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> La contraseña debe tener al menos 8 caracteres.';
+            return;
+        }
+        if (newPwd !== confirmPwd) {
+            feedback.style.display = 'block';
+            feedback.style.background = '#FEF2F2';
+            feedback.style.color = '#dc2626';
+            feedback.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Las contraseñas no coinciden.';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Actualizando...';
+
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        formData.append('current_password', currentPwd);
+        formData.append('new_password', newPwd);
+        formData.append('confirm_password', confirmPwd);
+
+        fetch('{% url "cambiar_password" %}', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            feedback.style.display = 'block';
+            if (data.tipo === 'exito') {
+                feedback.style.background = '#F0FDF4';
+                feedback.style.color = '#16a34a';
+                feedback.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + data.texto;
+                document.getElementById('form-cambiar-password').reset();
+                document.getElementById('pwd-strength-fill').style.width = '0';
+                document.getElementById('pwd-strength-text').textContent = '';
+                setTimeout(() => cerrarModalPassword(), 2000);
+            } else {
+                feedback.style.background = '#FEF2F2';
+                feedback.style.color = '#dc2626';
+                feedback.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> ' + data.texto;
+            }
+        })
+        .catch(() => {
+            feedback.style.display = 'block';
+            feedback.style.background = '#FEF2F2';
+            feedback.style.color = '#dc2626';
+            feedback.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error de conexión. Intente de nuevo.';
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-shield-check"></i> Actualizar Contraseña';
+        });
+    });
+
+    window.addEventListener('click', function(e) {
+        if (e.target === document.getElementById('modal-cambiar-password')) cerrarModalPassword();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('modal-cambiar-password').classList.contains('visible')) cerrarModalPassword();
+    });
+</script>
+
+{% block page_js %}{% endblock %}
+{% endblock %}

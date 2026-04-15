@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UNIDOSSIS - Portal del Cliente</title>
+    <link rel="stylesheet" href="shared.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .topbar-client { height: 80px; background: white; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 4rem; justify-content: space-between; }
+        .hero { background: var(--primary); color: white; padding: 4rem; text-align: center; }
+    </style>
+</head>
+<body style="flex-direction: column; overflow: auto; background: var(--bg);">
+    <div class="topbar-client">
+        <img src="../unidossis_pqrs/tickets/static/tickets/img/Logo.svg" alt="UNIDOSSIS Logo" style="height: 40px;">
+        <button class="btn" style="background: transparent; color: var(--text); border: 1px solid var(--border);">Mi Historial de Casos</button>
+    </div>
+    <div class="hero">
+        <h1 style="font-size: 2.5rem; margin-bottom: 10px;">Centro de Ayuda y Soporte</h1>
+        <p style="color: #cbd5e1;">Estamos aquí para asistirte. Registra tu Petición, Queja, Reclamo o Sugerencia.</p>
+    </div>
+    <div style="padding: 3rem 4rem; max-width: 800px; margin: 0 auto; width: 100%;">
+        <div class="card" style="box-shadow: var(--shadow-lg);">
+            <h3 style="margin-bottom: 1.5rem; font-weight: 600;">Radicar un nuevo caso</h3>
+            <form style="display: flex; flex-direction: column; gap: 15px;">
+                <div style="display: flex; gap: 15px;">
+                    <div style="flex: 1;"><label style="font-size: 0.85rem; font-weight: 600;">Tipo de Solicitud</label><select style="width: 100%; padding: 10px; border-radius: var(--radius); border: 1px solid var(--border); margin-top: 5px;"><option>Petición</option><option>Queja</option></select></div>
+                    <div style="flex: 1;"><label style="font-size: 0.85rem; font-weight: 600;">Asunto</label><input type="text" style="width: 100%; padding: 10px; border-radius: var(--radius); border: 1px solid var(--border); margin-top: 5px;"></div>
+                </div>
+                <div>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Detalles</label>
+                    <textarea style="width: 100%; min-height: 120px; padding: 10px; border-radius: var(--radius); border: 1px solid var(--border); margin-top: 5px; font-family: inherit;"></textarea>
+                </div>
+                <button type="button" class="btn" style="width: 100%; padding: 15px; font-size: 1rem; margin-top: 10px;">Enviar Solicitud</button>
+            </form>
+        </div>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

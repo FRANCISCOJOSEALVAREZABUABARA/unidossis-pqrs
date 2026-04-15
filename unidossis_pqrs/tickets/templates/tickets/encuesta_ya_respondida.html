@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Encuesta ya respondida | UNIDOSSIS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Plus Jakarta Sans',sans-serif; background:#f8fafc; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+        .card { background:white; border-radius:28px; padding:56px 40px; max-width:480px; width:100%; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.04); }
+        .icon { font-size:60px; margin-bottom:20px; }
+        h1 { font-size:22px; font-weight:800; color:#1e293b; margin-bottom:10px; }
+        p { color:#64748b; font-size:14px; line-height:1.7; }
+        .logo { height:36px; margin-top:28px; opacity:0.5; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="icon">📋</div>
+    <h1>¡Esta encuesta ya fue respondida!</h1>
+    <p>El caso <strong>#{{ encuesta.ticket.ticket_id }}</strong> ya tiene una calificación registrada. Gracias por su participación.</p>
+    <p style="margin-top:14px;">Estado actual: <strong>{{ encuesta.get_estado_display }}</strong></p>
+    <img src="{% static 'tickets/img/LOGOSVG.svg' %}" alt="UNIDOSSIS" class="logo">
+</div>
+</body>
+</html>

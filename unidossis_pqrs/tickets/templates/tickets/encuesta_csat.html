@@ -1,0 +1,106 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encuesta de Satisfacción — PQRS #{{ encuesta.ticket.ticket_id }} | UNIDOSSIS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent: #3b82f6; --success: #10b981; --warning: #f59e0b;
+            --danger: #ef4444; --bg: #f0f9ff; --white: #ffffff;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Plus Jakarta Sans',sans-serif; background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+        .card { background:white; border-radius:28px; padding:48px 40px; max-width:560px; width:100%; text-align:center; box-shadow:0 20px 60px rgba(59,130,246,0.1); }
+        .logo { height:48px; margin-bottom:28px; }
+        .ticket-badge { background:#eff6ff; color:#1d4ed8; padding:6px 18px; border-radius:20px; font-size:13px; font-weight:700; display:inline-block; margin-bottom:20px; }
+        h1 { font-size:24px; font-weight:800; color:#0f172a; letter-spacing:-0.5px; margin-bottom:8px; }
+        .subtitle { font-size:15px; color:#64748b; line-height:1.6; margin-bottom:32px; }
+        .asunto { background:#f8fafc; border-radius:12px; padding:14px 18px; font-weight:600; color:#1e293b; font-size:14px; margin-bottom:32px; text-align:left; border-left:3px solid var(--accent); }
+
+        /* Star rating */
+        .stars-container { margin-bottom:28px; }
+        .stars-label { font-size:13px; color:#64748b; font-weight:600; margin-bottom:14px; }
+        .stars { display:flex; gap:8px; justify-content:center; direction:rtl; }
+        .stars input { display:none; }
+        .stars label { font-size:44px; cursor:pointer; color:#e2e8f0; transition:color 0.15s, transform 0.15s; }
+        .stars input:checked ~ label,
+        .stars label:hover,
+        .stars label:hover ~ label { color:#f59e0b; transform:scale(1.1); }
+        .star-hint { font-size:12px; color:#94a3b8; margin-top:8px; height:18px; }
+
+        /* Comment textarea */
+        .comment-section { text-align:left; margin-bottom:28px; }
+        .comment-section label { font-size:13px; font-weight:700; color:#64748b; display:block; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; }
+        .comment-section textarea { width:100%; padding:14px; border:1.5px solid #e2e8f0; border-radius:14px; font-family:inherit; font-size:14px; resize:vertical; min-height:100px; transition:border-color 0.2s; }
+        .comment-section textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px #eff6ff; }
+
+        .btn-submit { width:100%; background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; padding:16px; border-radius:14px; font-weight:800; font-size:16px; cursor:pointer; transition:all 0.2s; }
+        .btn-submit:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(59,130,246,0.3); }
+        .btn-submit:disabled { background:#94a3b8; cursor:not-allowed; transform:none; }
+
+        .privacy-note { font-size:12px; color:#94a3b8; margin-top:16px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <img src="{% static 'tickets/img/LOGOSVG.svg' %}" alt="UNIDOSSIS" class="logo">
+    <div class="ticket-badge">Caso #{{ encuesta.ticket.ticket_id }}</div>
+    <h1>¿Cómo califica nuestra atención?</h1>
+    <p class="subtitle">Hemos dado respuesta a su PQRS. Su opinión nos ayuda a mejorar continuamente el servicio.</p>
+
+    <div class="asunto">
+        <strong>Asunto:</strong> {{ encuesta.ticket.asunto }}
+    </div>
+
+    <form method="POST" id="csat-form">
+        {% csrf_token %}
+
+        <div class="stars-container">
+            <div class="stars-label">Seleccione su calificación (1 es muy malo, 5 es excelente)</div>
+            <div class="stars">
+                <input type="radio" id="star5" name="puntuacion" value="5" required>
+                <label for="star5" title="Excelente">★</label>
+                <input type="radio" id="star4" name="puntuacion" value="4">
+                <label for="star4" title="Muy bueno">★</label>
+                <input type="radio" id="star3" name="puntuacion" value="3">
+                <label for="star3" title="Bueno">★</label>
+                <input type="radio" id="star2" name="puntuacion" value="2">
+                <label for="star2" title="Regular">★</label>
+                <input type="radio" id="star1" name="puntuacion" value="1">
+                <label for="star1" title="Muy malo">★</label>
+            </div>
+            <div class="star-hint" id="star-hint"></div>
+        </div>
+
+        <div class="comment-section">
+            <label>Comentario adicional (opcional)</label>
+            <textarea name="comentario" placeholder="Cuéntenos cómo mejorar o qué hicimos bien..."></textarea>
+        </div>
+
+        <div id="warning-insatisfecho" style="display:none; background:#fff1f2; border:1px solid #fecdd3; border-radius:12px; padding:14px; margin-bottom:16px; font-size:13px; color:#be123c; text-align:left;">
+            <i class="fa-solid fa-circle-exclamation"></i> <strong>Nota:</strong> Al calificar con 1 o 2 estrellas, su caso será <strong>reabierto automáticamente</strong> y nuestro equipo lo contactará a la brevedad para resolver su inconformidad.
+        </div>
+
+        <button type="submit" class="btn-submit" id="btn-submit" disabled>
+            <i class="fa-solid fa-paper-plane"></i> Enviar mi calificación
+        </button>
+        <p class="privacy-note">Su respuesta es confidencial y solo se usa para mejorar nuestro servicio.</p>
+    </form>
+</div>
+
+<script>
+const hints = { '5':'⭐⭐⭐⭐⭐ Excelente — ¡Gracias!', '4':'⭐⭐⭐⭐ Muy bueno', '3':'⭐⭐⭐ Bueno', '2':'⭐⭐ Regular', '1':'⭐ Muy malo' };
+document.querySelectorAll('input[name="puntuacion"]').forEach(input => {
+    input.addEventListener('change', () => {
+        document.getElementById('star-hint').textContent = hints[input.value] || '';
+        document.getElementById('btn-submit').disabled = false;
+        document.getElementById('warning-insatisfecho').style.display = (parseInt(input.value) <= 2) ? 'block' : 'none';
+    });
+});
+</script>
+</body>
+</html>
