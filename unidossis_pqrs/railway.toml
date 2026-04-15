@@ -3,7 +3,7 @@
 
 [build]
 builder = "nixpacks"
-buildCommand = "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py shell -c \"from django.contrib.auth import get_user_model; U=get_user_model(); U.objects.filter(username='admin').exists() or U.objects.create_superuser('admin', 'admin@unidossis.com.co', 'Unidossis2025*')\""
+buildCommand = "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py shell -c \"from django.contrib.auth import get_user_model; from tickets.models import PerfilUsuario; U=get_user_model(); u=U.objects.filter(username='admin').first() or U.objects.create_superuser('admin', 'admin@unidossis.com.co', 'Unidossis2025*'); u.first_name='Admin'; u.last_name='Unidossis'; u.save(); p,_=PerfilUsuario.objects.get_or_create(user=u, defaults={'rol':'superadmin'}); p.rol='superadmin'; p.save(); print('OK: admin perfil superadmin')\""
 
 [deploy]
 startCommand = "gunicorn unidossis_pqrs.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
