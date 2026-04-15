@@ -1,12 +1,9 @@
 # railway.toml — Configuración para Railway.app
-# Este archivo le dice a Railway exactamente cómo construir y arrancar la app
+# Formato correcto según documentación oficial de Railway
 
 [build]
 builder = "nixpacks"
-
-[build.buildCommand]
-# Instala dependencias y recoge archivos estáticos (CSS, JS, imágenes)
-cmd = "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py shell -c \"from django.contrib.auth import get_user_model; U=get_user_model(); U.objects.filter(username='admin').exists() or U.objects.create_superuser('admin', 'admin@unidossis.com.co', 'Unidossis2025*')\" "
+buildCommand = "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py shell -c \"from django.contrib.auth import get_user_model; U=get_user_model(); U.objects.filter(username='admin').exists() or U.objects.create_superuser('admin', 'admin@unidossis.com.co', 'Unidossis2025*')\""
 
 [deploy]
 startCommand = "gunicorn unidossis_pqrs.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
