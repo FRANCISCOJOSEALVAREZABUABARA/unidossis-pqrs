@@ -1,0 +1,13 @@
+# railway.toml — en la RAÍZ del repositorio
+# Le dice a Railway que esto es una app Python/Django
+
+[build]
+builder = "nixpacks"
+buildCommand = "cd unidossis_pqrs && pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py setup_produccion"
+
+[deploy]
+startCommand = "cd unidossis_pqrs && gunicorn unidossis_pqrs.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+healthcheckPath = "/login/"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
