@@ -40,9 +40,16 @@ urlpatterns = [
     path('api/ticket/<str:ticket_id>/comentario/', views.api_agregar_comentario, name='api_agregar_comentario'),
     path('api/ticket/<str:ticket_id>/reclasificar/', views.api_reclasificar_ia, name='api_reclasificar_ia'),
     path('api/ticket/<str:ticket_id>/aplicar-reclasificacion/', views.api_aplicar_reclasificacion, name='api_aplicar_reclasificacion'),
+    path('api/buscar-tickets/', views.api_buscar_tickets, name='api_buscar_tickets'),
 
     # ─── Monitoreo del Sistema ───────────────────────────────
     path('monitoreo/', views.monitoreo_view, name='monitoreo'),
     path('monitoreo/descargar/<str:tipo>/', views.descargar_log_view, name='descargar_log'),
     path('monitoreo/respaldo-db/', views.descargar_respaldo_db_view, name='descargar_respaldo_db'),
+
+    # ─── Control de Cambios ──────────────────────────────────
+    path('control-cambios/', views.control_cambios_view, name='control_cambios'),
+    path('control-cambios/api/detalle/<str:commit_hash>/', views.api_detalle_commit, name='api_detalle_commit'),
+    path('control-cambios/api/diff/<str:commit_hash>/', views.api_diff_commit, name='api_diff_commit'),
+    path('control-cambios/api/revertir/<str:commit_hash>/', views.api_revertir_commit, name='api_revertir_commit'),
 ]

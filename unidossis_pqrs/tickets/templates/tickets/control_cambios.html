@@ -1,0 +1,646 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* ═══════ CONTROL DE CAMBIOS — Premium Panel ═══════ */
+    .cc-header {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 28px; flex-wrap: wrap; gap: 16px;
+    }
+    .cc-header h1 { font-size: 22px; font-weight: 700; color: var(--text-dark); margin: 0; }
+    .cc-header h1 i { color: #8b5cf6; margin-right: 8px; }
+
+    .cc-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .cc-btn {
+        padding: 8px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+        cursor: pointer; border: none; transition: all 0.2s;
+        display: flex; align-items: center; gap: 6px; text-decoration: none;
+    }
+    .cc-btn-primary { background: #8b5cf6; color: white; }
+    .cc-btn-primary:hover { background: #7c3aed; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139,92,246,0.3); }
+    .cc-btn-outline {
+        background: white; color: var(--text-dark); border: 1.5px solid var(--border-light);
+    }
+    .cc-btn-outline:hover { border-color: #8b5cf6; color: #8b5cf6; background: #f5f3ff; }
+    .cc-btn-danger { background: #ef4444; color: white; }
+    .cc-btn-danger:hover { background: #dc2626; }
+    .cc-btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 8px; }
+
+    /* Status cards row */
+    .cc-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .cc-stat-card {
+        background: white; border-radius: 16px; padding: 20px; text-align: center;
+        border: 1px solid var(--border-light); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        transition: all 0.3s ease;
+    }
+    .cc-stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .cc-stat-icon { font-size: 24px; margin-bottom: 8px; }
+    .cc-stat-value { font-size: 28px; font-weight: 800; color: var(--text-dark); }
+    .cc-stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+    /* Sync status banner */
+    .cc-sync-banner {
+        display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+        border-radius: 14px; margin-bottom: 24px; font-size: 13px; font-weight: 600;
+        animation: fadeInUp 0.4s ease;
+    }
+    .cc-sync-banner.synced { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #6ee7b7; color: #065f46; }
+    .cc-sync-banner.ahead { background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #fbbf24; color: #92400e; }
+    .cc-sync-banner.behind { background: linear-gradient(135deg, #fee2e2, #fecaca); border: 1px solid #f87171; color: #991b1b; }
+    .cc-sync-banner i { font-size: 18px; }
+    .cc-sync-badge {
+        margin-left: auto; padding: 4px 12px; border-radius: 20px;
+        font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+    }
+    .cc-sync-banner.synced .cc-sync-badge { background: #059669; color: white; }
+    .cc-sync-banner.ahead .cc-sync-badge { background: #d97706; color: white; }
+    .cc-sync-banner.behind .cc-sync-badge { background: #dc2626; color: white; }
+
+    /* Filter tabs */
+    .cc-filter-bar {
+        display: flex; gap: 8px; flex-wrap: wrap; padding: 14px 20px;
+        background: white; border-radius: 14px; margin-bottom: 24px;
+        border: 1px solid var(--border-light); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        align-items: center;
+    }
+    .cc-filter-label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-right: 8px; }
+    .cc-filter-tab {
+        padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+        cursor: pointer; border: 1.5px solid var(--border-light); background: white;
+        color: var(--text-muted); transition: all 0.2s;
+    }
+    .cc-filter-tab:hover { border-color: #8b5cf6; color: #8b5cf6; }
+    .cc-filter-tab.active { background: #8b5cf6; color: white; border-color: #8b5cf6; }
+
+    /* Timeline */
+    .cc-timeline { position: relative; padding-left: 32px; }
+    .cc-timeline::before {
+        content: ''; position: absolute; left: 15px; top: 0; bottom: 0;
+        width: 2px; background: linear-gradient(to bottom, #8b5cf6, #c4b5fd, var(--border-light));
+    }
+
+    .cc-commit {
+        position: relative; margin-bottom: 16px; animation: fadeInUp 0.4s ease;
+    }
+    .cc-commit:nth-child(1) { animation-delay: 0.05s; }
+    .cc-commit:nth-child(2) { animation-delay: 0.1s; }
+    .cc-commit:nth-child(3) { animation-delay: 0.15s; }
+    .cc-commit:nth-child(4) { animation-delay: 0.2s; }
+    .cc-commit:nth-child(5) { animation-delay: 0.25s; }
+
+    .cc-commit-dot {
+        position: absolute; left: -25px; top: 18px;
+        width: 14px; height: 14px; border-radius: 50%;
+        background: white; border: 3px solid #8b5cf6;
+        z-index: 2; transition: all 0.3s;
+    }
+    .cc-commit:hover .cc-commit-dot {
+        background: #8b5cf6; box-shadow: 0 0 0 4px rgba(139,92,246,0.2);
+    }
+    .cc-commit.is-prod .cc-commit-dot { border-color: #059669; background: #059669; }
+    .cc-commit.is-local .cc-commit-dot { border-color: #f59e0b; }
+
+    .cc-commit-card {
+        background: white; border-radius: 14px; padding: 18px 22px;
+        border: 1px solid var(--border-light); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        cursor: pointer; transition: all 0.3s ease;
+    }
+    .cc-commit-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-color: #c4b5fd;
+        transform: translateX(4px);
+    }
+    .cc-commit.is-prod .cc-commit-card { border-left: 3px solid #059669; }
+    .cc-commit.is-local .cc-commit-card { border-left: 3px solid #f59e0b; }
+
+    .cc-commit-top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+    .cc-commit-hash {
+        font-family: 'Courier New', monospace; font-size: 12px; font-weight: 700;
+        background: #f5f3ff; color: #7c3aed; padding: 3px 10px; border-radius: 6px;
+        letter-spacing: 0.5px;
+    }
+    .cc-commit-date { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+    .cc-commit-author {
+        font-size: 11px; color: var(--text-faint); font-weight: 600;
+        display: flex; align-items: center; gap: 4px;
+    }
+    .cc-commit-author i { font-size: 10px; }
+    .cc-commit-env {
+        font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 12px;
+        letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .cc-env-prod { background: #ecfdf5; color: #059669; }
+    .cc-env-local { background: #fffbeb; color: #d97706; }
+
+    .cc-commit-msg { font-size: 14px; font-weight: 600; color: var(--text-dark); line-height: 1.4; }
+    .cc-commit-msg .cc-prefix {
+        display: inline-block; font-size: 11px; font-weight: 700;
+        padding: 2px 8px; border-radius: 6px; margin-right: 6px;
+        vertical-align: middle;
+    }
+    .cc-prefix-feat { background: #dbeafe; color: #1d4ed8; }
+    .cc-prefix-fix { background: #fce7f3; color: #be185d; }
+    .cc-prefix-ci { background: #e0e7ff; color: #4338ca; }
+    .cc-prefix-config { background: #fef3c7; color: #b45309; }
+    .cc-prefix-other { background: #f3f4f6; color: #6b7280; }
+
+    .cc-commit-actions {
+        display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
+        border-top: 1px solid var(--border-light); padding-top: 12px;
+    }
+
+    /* Detail panel (expandable) */
+    .cc-detail-panel {
+        display: none; margin-top: 12px; padding: 16px;
+        background: #f8fafc; border-radius: 12px; border: 1px solid var(--border-light);
+        animation: fadeInUp 0.3s ease;
+    }
+    .cc-detail-panel.visible { display: block; }
+    .cc-detail-title { font-size: 13px; font-weight: 700; color: var(--text-dark); margin-bottom: 10px; }
+    .cc-detail-title i { color: #8b5cf6; margin-right: 6px; }
+
+    .cc-file-list { list-style: none; padding: 0; margin: 0; }
+    .cc-file-item {
+        display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+        border-radius: 8px; font-size: 12.5px; font-family: 'Courier New', monospace;
+        transition: background 0.2s; color: var(--text-dark);
+    }
+    .cc-file-item:hover { background: rgba(139,92,246,0.06); }
+    .cc-file-badge {
+        font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+        min-width: 24px; text-align: center;
+    }
+    .cc-file-add { background: #d1fae5; color: #065f46; }
+    .cc-file-mod { background: #dbeafe; color: #1e40af; }
+    .cc-file-del { background: #fee2e2; color: #991b1b; }
+    .cc-file-ren { background: #fef3c7; color: #92400e; }
+
+    /* Diff viewer */
+    .cc-diff-container {
+        background: #1e1e2e; border-radius: 12px; padding: 16px; margin-top: 12px;
+        max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace;
+        font-size: 12px; line-height: 1.7; color: #cdd6f4;
+        border: 1px solid rgba(139,92,246,0.2);
+    }
+    .cc-diff-container::-webkit-scrollbar { width: 8px; }
+    .cc-diff-container::-webkit-scrollbar-thumb { background: #45475a; border-radius: 4px; }
+    .cc-diff-line { padding: 1px 8px; border-radius: 3px; white-space: pre-wrap; word-break: break-all; }
+    .cc-diff-add { background: rgba(166, 227, 161, 0.12); color: #a6e3a1; }
+    .cc-diff-del { background: rgba(243, 139, 168, 0.12); color: #f38ba8; }
+    .cc-diff-hunk { color: #89b4fa; font-weight: 700; }
+    .cc-diff-file-header { color: #cba6f7; font-weight: 700; margin-top: 8px; }
+
+    /* Revert confirmation modal */
+    .cc-modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+        z-index: 9999; display: none; align-items: center; justify-content: center;
+    }
+    .cc-modal-overlay.visible { display: flex; }
+    .cc-modal {
+        background: white; border-radius: 20px; max-width: 480px; width: 90%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2); animation: fadeInUp 0.3s ease;
+    }
+    .cc-modal-header {
+        padding: 24px 28px 16px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .cc-modal-header h3 {
+        margin: 0; font-size: 17px; display: flex; align-items: center; gap: 10px;
+    }
+    .cc-modal-body { padding: 0 28px 20px; font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+    .cc-modal-footer { padding: 16px 28px 24px; display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* Loading */
+    .cc-loading {
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        padding: 20px; color: var(--text-muted); font-size: 13px;
+    }
+    .cc-loading i { animation: spin 1s linear infinite; }
+
+    /* Empty state */
+    .cc-empty {
+        text-align: center; padding: 60px 20px; color: var(--text-muted);
+    }
+    .cc-empty i { font-size: 40px; margin-bottom: 12px; display: block; color: #c4b5fd; }
+
+    /* Animations */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Pending changes section */
+    .cc-pending {
+        background: white; border-radius: 14px; padding: 18px 22px;
+        border: 1px solid var(--border-light); margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .cc-pending-title {
+        font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .cc-pending-title i { color: #f59e0b; }
+    .cc-pending-count {
+        background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700;
+        padding: 2px 8px; border-radius: 12px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .cc-header { flex-direction: column; align-items: flex-start; }
+        .cc-stats { grid-template-columns: repeat(2, 1fr); }
+        .cc-commit-top { flex-direction: column; align-items: flex-start; gap: 6px; }
+        .cc-timeline { padding-left: 24px; }
+        .cc-commit-dot { left: -20px; width: 12px; height: 12px; }
+    }
+</style>
+
+<div class="cc-header">
+    <h1><i class="fa-solid fa-code-branch"></i> Control de Cambios</h1>
+    <div class="cc-actions">
+        <button class="cc-btn cc-btn-outline" onclick="location.reload()">
+            <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+        </button>
+        <a href="{% url 'monitoreo' %}" class="cc-btn cc-btn-outline">
+            <i class="fa-solid fa-chart-area"></i> Monitor
+        </a>
+    </div>
+</div>
+
+<!-- Sync status banner -->
+{% if commits_ahead > 0 %}
+<div class="cc-sync-banner ahead">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <div>
+        <strong>{{ commits_ahead }} cambio{{ commits_ahead|pluralize:"s" }} pendiente{{ commits_ahead|pluralize:"s" }} de publicar</strong>
+        <div style="font-weight: 500; font-size: 12px; margin-top: 2px; opacity: 0.85;">
+            Los siguientes commits están en local pero aún no en producción.
+        </div>
+    </div>
+    <span class="cc-sync-badge">LOCAL AHEAD</span>
+</div>
+{% elif sync_status == 'synced' %}
+<div class="cc-sync-banner synced">
+    <i class="fa-solid fa-circle-check"></i>
+    <div>
+        <strong>Sincronizado con producción</strong>
+        <div style="font-weight: 500; font-size: 12px; margin-top: 2px; opacity: 0.85;">
+            Todos los cambios locales están publicados en producción.
+        </div>
+    </div>
+    <span class="cc-sync-badge">EN SYNC</span>
+</div>
+{% else %}
+<div class="cc-sync-banner ahead">
+    <i class="fa-solid fa-code-branch"></i>
+    <div>
+        <strong>Repositorio local activo</strong>
+        <div style="font-weight: 500; font-size: 12px; margin-top: 2px; opacity: 0.85;">
+            Verifica el estado de cada commit frente a producción.
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Stats -->
+<div class="cc-stats">
+    <div class="cc-stat-card">
+        <div class="cc-stat-icon">📝</div>
+        <div class="cc-stat-value">{{ total_commits }}</div>
+        <div class="cc-stat-label">Total de Commits</div>
+    </div>
+    <div class="cc-stat-card">
+        <div class="cc-stat-icon">📦</div>
+        <div class="cc-stat-value">{{ commits_ahead }}</div>
+        <div class="cc-stat-label">Pendientes de Publicar</div>
+    </div>
+    <div class="cc-stat-card">
+        <div class="cc-stat-icon">📂</div>
+        <div class="cc-stat-value">{{ archivos_modificados }}</div>
+        <div class="cc-stat-label">Archivos con Cambios Locales</div>
+    </div>
+    <div class="cc-stat-card">
+        <div class="cc-stat-icon">🕐</div>
+        <div class="cc-stat-value">{{ ultimo_commit_fecha }}</div>
+        <div class="cc-stat-label">Último Cambio</div>
+    </div>
+</div>
+
+<!-- Pending local changes (not committed) -->
+{% if cambios_pendientes %}
+<div class="cc-pending">
+    <div class="cc-pending-title">
+        <i class="fa-solid fa-pen-to-square"></i> Cambios locales sin confirmar
+        <span class="cc-pending-count">{{ cambios_pendientes|length }} archivos</span>
+    </div>
+    <ul class="cc-file-list">
+        {% for cambio in cambios_pendientes %}
+        <li class="cc-file-item">
+            {% if 'M ' in cambio or ' M' in cambio %}
+                <span class="cc-file-badge cc-file-mod">M</span>
+            {% elif '??' in cambio %}
+                <span class="cc-file-badge cc-file-add">+</span>
+            {% elif 'D ' in cambio or ' D' in cambio %}
+                <span class="cc-file-badge cc-file-del">D</span>
+            {% elif 'R ' in cambio %}
+                <span class="cc-file-badge cc-file-ren">R</span>
+            {% else %}
+                <span class="cc-file-badge cc-file-mod">?</span>
+            {% endif %}
+            <span>{{ cambio }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<!-- Filter tabs -->
+<div class="cc-filter-bar">
+    <span class="cc-filter-label"><i class="fa-solid fa-filter"></i> Filtrar:</span>
+    <div class="cc-filter-tab active" data-filter="all" onclick="filterCommits('all', this)">Todos</div>
+    <div class="cc-filter-tab" data-filter="feat" onclick="filterCommits('feat', this)">✨ Features</div>
+    <div class="cc-filter-tab" data-filter="fix" onclick="filterCommits('fix', this)">🐛 Fixes</div>
+    <div class="cc-filter-tab" data-filter="ci" onclick="filterCommits('ci', this)">🔧 CI/Config</div>
+</div>
+
+<!-- Commit Timeline -->
+<div class="cc-timeline" id="commitTimeline">
+    {% if commits %}
+    {% for commit in commits %}
+    <div class="cc-commit {% if commit.is_in_prod %}is-prod{% else %}is-local{% endif %}" 
+         data-type="{{ commit.prefix_type }}" data-hash="{{ commit.hash }}">
+        <div class="cc-commit-dot"></div>
+        <div class="cc-commit-card" onclick="toggleDetail('{{ commit.hash }}')">
+            <div class="cc-commit-top">
+                <span class="cc-commit-hash">{{ commit.hash_short }}</span>
+                <span class="cc-commit-date">
+                    <i class="fa-regular fa-calendar"></i> {{ commit.date }}
+                </span>
+                <span class="cc-commit-author">
+                    <i class="fa-solid fa-user"></i> {{ commit.author }}
+                </span>
+                {% if commit.is_in_prod %}
+                <span class="cc-commit-env cc-env-prod">✓ EN PRODUCCIÓN</span>
+                {% else %}
+                <span class="cc-commit-env cc-env-local">⏳ SOLO LOCAL</span>
+                {% endif %}
+            </div>
+            <div class="cc-commit-msg">
+                {% if commit.prefix_type == 'feat' %}
+                    <span class="cc-prefix cc-prefix-feat">FEATURE</span>
+                {% elif commit.prefix_type == 'fix' %}
+                    <span class="cc-prefix cc-prefix-fix">FIX</span>
+                {% elif commit.prefix_type == 'ci' or commit.prefix_type == 'config' %}
+                    <span class="cc-prefix cc-prefix-ci">CONFIG</span>
+                {% else %}
+                    <span class="cc-prefix cc-prefix-other">UPDATE</span>
+                {% endif %}
+                {{ commit.message }}
+            </div>
+            <div class="cc-commit-actions">
+                <button class="cc-btn cc-btn-outline cc-btn-sm" onclick="event.stopPropagation(); loadDetail('{{ commit.hash }}')">
+                    <i class="fa-solid fa-code"></i> Ver Archivos
+                </button>
+                <button class="cc-btn cc-btn-outline cc-btn-sm" onclick="event.stopPropagation(); loadDiff('{{ commit.hash }}')">
+                    <i class="fa-solid fa-file-lines"></i> Ver Diff
+                </button>
+                {% if not commit.is_in_prod %}
+                <button class="cc-btn cc-btn-danger cc-btn-sm" onclick="event.stopPropagation(); confirmRevert('{{ commit.hash_short }}', '{{ commit.hash }}', '{{ commit.message|escapejs }}')">
+                    <i class="fa-solid fa-rotate-left"></i> Revertir
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        <!-- Detail panel (loaded via AJAX) -->
+        <div class="cc-detail-panel" id="detail-{{ commit.hash }}"></div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="cc-empty">
+        <i class="fa-solid fa-code-branch"></i>
+        No se encontraron commits en el historial.<br>
+        Verifica que el repositorio Git esté correctamente configurado.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Revert Confirmation Modal -->
+<div class="cc-modal-overlay" id="revertModal">
+    <div class="cc-modal">
+        <div class="cc-modal-header">
+            <h3>
+                <span style="width:36px; height:36px; background:#fef2f2; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626; font-size:15px;"></i>
+                </span>
+                Confirmar Reversión
+            </h3>
+            <button class="cc-btn cc-btn-outline cc-btn-sm" onclick="closeRevertModal()" style="width:32px; height:32px; padding:0; border-radius:50%;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="cc-modal-body">
+            <p>¿Estás seguro de que deseas revertir el commit <strong id="revertHashDisplay"></strong>?</p>
+            <p style="font-size: 13px; margin-top: 8px;">
+                <strong>Mensaje del commit:</strong><br>
+                <span id="revertMsgDisplay" style="color: var(--text-dark);"></span>
+            </p>
+            <div style="background: #fef2f2; padding: 12px 14px; border-radius: 10px; margin-top: 12px; font-size: 12px; color: #991b1b;">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <strong>Advertencia:</strong> Se creará un nuevo commit que deshace los cambios de este commit. 
+                Esta acción solo afecta el repositorio local. Deberá publicar para que se refleje en producción.
+            </div>
+        </div>
+        <div class="cc-modal-footer">
+            <button class="cc-btn cc-btn-outline" onclick="closeRevertModal()">
+                <i class="fa-solid fa-xmark"></i> Cancelar
+            </button>
+            <button class="cc-btn cc-btn-danger" id="btnConfirmRevert" onclick="executeRevert()">
+                <i class="fa-solid fa-rotate-left"></i> Sí, Revertir
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Feedback toast -->
+<div id="ccToast" style="position:fixed; bottom:30px; right:30px; padding:14px 24px; border-radius:12px; 
+    font-size:13px; font-weight:600; z-index:10000; display:none; box-shadow:0 8px 30px rgba(0,0,0,0.15);
+    animation: fadeInUp 0.3s ease;"></div>
+
+<script>
+    let revertHash = '';
+
+    // ═══════ FILTER COMMITS ═══════
+    function filterCommits(type, el) {
+        document.querySelectorAll('.cc-filter-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+
+        document.querySelectorAll('.cc-commit').forEach(commit => {
+            if (type === 'all') {
+                commit.style.display = '';
+            } else {
+                commit.style.display = commit.dataset.type === type ? '' : 'none';
+            }
+        });
+    }
+
+    // ═══════ LOAD COMMIT DETAIL (FILES) ═══════
+    function loadDetail(hash) {
+        const panel = document.getElementById('detail-' + hash);
+        if (panel.classList.contains('visible') && panel.dataset.type === 'files') {
+            panel.classList.remove('visible');
+            return;
+        }
+
+        panel.innerHTML = '<div class="cc-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando archivos...</div>';
+        panel.classList.add('visible');
+        panel.dataset.type = 'files';
+
+        fetch(`/control-cambios/api/detalle/${hash}/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    panel.innerHTML = `<div style="color:var(--danger); font-size:13px;"><i class="fa-solid fa-circle-exclamation"></i> ${data.error}</div>`;
+                    return;
+                }
+
+                let html = `<div class="cc-detail-title"><i class="fa-solid fa-folder-tree"></i> Archivos modificados (${data.files.length})</div>`;
+                html += '<ul class="cc-file-list">';
+                data.files.forEach(f => {
+                    let badge = 'cc-file-mod', label = 'M';
+                    if (f.status === 'A') { badge = 'cc-file-add'; label = '+'; }
+                    else if (f.status === 'D') { badge = 'cc-file-del'; label = 'D'; }
+                    else if (f.status === 'R') { badge = 'cc-file-ren'; label = 'R'; }
+                    html += `<li class="cc-file-item"><span class="cc-file-badge ${badge}">${label}</span> <span>${f.path}</span></li>`;
+                });
+                html += '</ul>';
+                panel.innerHTML = html;
+            })
+            .catch(() => {
+                panel.innerHTML = '<div style="color:var(--danger); font-size:13px;"><i class="fa-solid fa-circle-exclamation"></i> Error al cargar los detalles.</div>';
+            });
+    }
+
+    // ═══════ LOAD COMMIT DIFF ═══════
+    function loadDiff(hash) {
+        const panel = document.getElementById('detail-' + hash);
+        if (panel.classList.contains('visible') && panel.dataset.type === 'diff') {
+            panel.classList.remove('visible');
+            return;
+        }
+
+        panel.innerHTML = '<div class="cc-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando diferencias...</div>';
+        panel.classList.add('visible');
+        panel.dataset.type = 'diff';
+
+        fetch(`/control-cambios/api/diff/${hash}/`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    panel.innerHTML = `<div style="color:var(--danger); font-size:13px;"><i class="fa-solid fa-circle-exclamation"></i> ${data.error}</div>`;
+                    return;
+                }
+
+                let html = '<div class="cc-detail-title"><i class="fa-solid fa-file-lines"></i> Diferencias del commit</div>';
+                html += '<div class="cc-diff-container">';
+                
+                if (data.diff && data.diff.length > 0) {
+                    data.diff.forEach(line => {
+                        let cls = '';
+                        if (line.startsWith('+') && !line.startsWith('+++')) cls = 'cc-diff-add';
+                        else if (line.startsWith('-') && !line.startsWith('---')) cls = 'cc-diff-del';
+                        else if (line.startsWith('@@')) cls = 'cc-diff-hunk';
+                        else if (line.startsWith('diff ') || line.startsWith('---') || line.startsWith('+++')) cls = 'cc-diff-file-header';
+                        
+                        const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        html += `<div class="cc-diff-line ${cls}">${escaped}</div>`;
+                    });
+                } else {
+                    html += '<div style="text-align:center; padding:20px; color:#6c7086;"><i class="fa-solid fa-circle-check"></i> Sin diferencias visibles (commit de merge o binario).</div>';
+                }
+
+                html += '</div>';
+                panel.innerHTML = html;
+            })
+            .catch(() => {
+                panel.innerHTML = '<div style="color:var(--danger); font-size:13px;"><i class="fa-solid fa-circle-exclamation"></i> Error al cargar las diferencias.</div>';
+            });
+    }
+
+    // ═══════ TOGGLE DETAIL ═══════
+    function toggleDetail(hash) {
+        const panel = document.getElementById('detail-' + hash);
+        if (panel.classList.contains('visible')) {
+            panel.classList.remove('visible');
+        }
+    }
+
+    // ═══════ REVERT FLOW ═══════
+    function confirmRevert(hashShort, hashFull, message) {
+        revertHash = hashFull;
+        document.getElementById('revertHashDisplay').textContent = hashShort;
+        document.getElementById('revertMsgDisplay').textContent = message;
+        document.getElementById('revertModal').classList.add('visible');
+    }
+
+    function closeRevertModal() {
+        document.getElementById('revertModal').classList.remove('visible');
+        revertHash = '';
+    }
+
+    function executeRevert() {
+        const btn = document.getElementById('btnConfirmRevert');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Revirtiendo...';
+
+        fetch(`/control-cambios/api/revertir/${revertHash}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            closeRevertModal();
+            if (data.success) {
+                showToast('success', data.message || '✅ Commit revertido exitosamente.');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast('error', data.error || '❌ Error al revertir.');
+            }
+        })
+        .catch(() => {
+            closeRevertModal();
+            showToast('error', '❌ Error de conexión al revertir.');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Sí, Revertir';
+        });
+    }
+
+    // ═══════ TOAST ═══════
+    function showToast(type, msg) {
+        const toast = document.getElementById('ccToast');
+        toast.style.display = 'block';
+        if (type === 'success') {
+            toast.style.background = '#059669';
+            toast.style.color = 'white';
+        } else {
+            toast.style.background = '#dc2626';
+            toast.style.color = 'white';
+        }
+        toast.textContent = msg;
+        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    }
+
+    // Close modal on overlay click or Escape
+    window.addEventListener('click', e => {
+        if (e.target === document.getElementById('revertModal')) closeRevertModal();
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeRevertModal();
+    });
+</script>
+{% endblock %}

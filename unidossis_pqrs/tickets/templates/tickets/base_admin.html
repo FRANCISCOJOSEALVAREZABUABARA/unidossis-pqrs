@@ -98,6 +98,10 @@
                 <i class="fa-solid fa-chart-area"></i>
                 <span>Monitor del Sistema</span>
             </a>
+            <a href="{% url 'control_cambios' %}" class="nav-item {% if nav_active == 'control_cambios' %}active{% endif %}">
+                <i class="fa-solid fa-code-branch"></i>
+                <span>Control de Cambios</span>
+            </a>
             {% endif %}
         </div>
 

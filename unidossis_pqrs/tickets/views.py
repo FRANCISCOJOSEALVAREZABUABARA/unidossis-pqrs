@@ -215,10 +215,15 @@ def dashboard_view(request):
             filtro_supervisor |= Q(responsable__icontains=request.user.first_name)
         tickets_query = Ticket.objects.filter(filtro_supervisor)
 
-    # Filtro por cliente (Para Inteligencia Analítica)
+    # Filtro por cliente (Para Inteligencia Analítica y buscador inteligente)
     cliente_id = request.GET.get('cliente_id')
+    cliente_filtrado_nombre = None
     if cliente_id:
         tickets_query = tickets_query.filter(cliente_rel_id=cliente_id)
+        try:
+            cliente_filtrado_nombre = Cliente.objects.get(id=cliente_id).nombre
+        except Cliente.DoesNotExist:
+            cliente_filtrado_nombre = None
 
     # Motor de búsqueda
     search_query = request.GET.get('q')
@@ -312,6 +317,7 @@ def dashboard_view(request):
         'nav_active': 'dashboard',
         'clientes_disponibles': clientes_disponibles,
         'cliente_id_selected': cliente_id,
+        'cliente_filtrado_nombre': cliente_filtrado_nombre,
         # Choices para modal de creación manual
         'TIPO_CHOICES': Ticket.TIPO_SOLICITUD_CHOICES,
         'REGIONAL_CHOICES': Ticket.REGIONAL_CHOICES,
@@ -372,7 +378,7 @@ def ticket_detail_view(request, ticket_id):
         if criticidad: ticket.criticidad = criticidad
 
         # Regional: solo superadmin y admin_pqrs pueden cambiarla
-        if regional is not None and perfil.rol in ('superadmin', 'admin_pqrs'):
+        if regional is not None and perfil.rol in ('superadmin', 'admin_pqrs', 'supervisor'):
             regional_anterior = ticket.regional
             ticket.regional = regional
             if regional != regional_anterior:
@@ -1683,3 +1689,419 @@ def crear_pqrs_manual_view(request):
     )
 
     return redirect('ticket_detail', ticket_id=nuevo_ticket.ticket_id)
+
+
+# ─────────────────────────────────────────────────────────────
+# API BUSCAR TICKETS - BUSCADOR INTELIGENTE DASHBOARD
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+def api_buscar_tickets(request):
+    """Busca coincidencias agrupadas por categoría para el buscador inteligente."""
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'grupos': []})
+
+    perfil = request.user.perfil
+    # Base query según rol
+    if perfil.rol in ['superadmin', 'admin_pqrs']:
+        qs = Ticket.objects.all()
+    elif perfil.rol == 'director_regional':
+        qs = Ticket.objects.filter(regional=perfil.regional)
+    elif perfil.rol == 'supervisor':
+        filtro = Q(responsable__icontains=request.user.username)
+        if request.user.get_full_name():
+            filtro |= Q(responsable__icontains=request.user.get_full_name())
+        if request.user.last_name:
+            filtro |= Q(responsable__icontains=request.user.last_name)
+        qs = Ticket.objects.filter(filtro)
+    else:
+        return JsonResponse({'grupos': []})
+
+    grupos = []
+
+    # ── 1. CLIENTES (primera prioridad)
+    # Solo clientes que tienen tickets visibles para este usuario (respeta rol)
+    clientes_con_tickets_ids = qs.exclude(
+        cliente_rel__isnull=True
+    ).values_list('cliente_rel_id', flat=True).distinct()
+
+    clientes_match = Cliente.objects.filter(
+        id__in=clientes_con_tickets_ids,
+        nombre__icontains=q
+    ).distinct()[:6]
+
+    items_clientes = []
+    seen_clientes = set()
+    for c in clientes_match:
+        cant = qs.filter(cliente_rel=c).count()
+        if cant > 0 and c.id not in seen_clientes:
+            seen_clientes.add(c.id)
+            items_clientes.append({
+                'tipo': 'cliente',
+                'texto': c.nombre,
+                'subtexto': c.get_regional_display() if c.regional else 'Sin regional',
+                'cantidad': cant,
+                'accion': f'/dashboard/?cliente_id={c.id}',
+                'id': c.id,
+            })
+
+    # También buscar entidades libres (tickets sin cliente_rel) que coincidan
+    entidades = qs.filter(
+        cliente_rel__isnull=True
+    ).filter(
+        Q(entidad_cliente__icontains=q) | Q(institucion__icontains=q)
+    ).values_list('entidad_cliente', flat=True).distinct()[:4]
+
+    seen_ent = set(c['texto'].lower() for c in items_clientes)
+    for e in entidades:
+        if e and e.strip() and e.lower() not in seen_ent:
+            seen_ent.add(e.lower())
+            cant = qs.filter(Q(entidad_cliente__iexact=e) | Q(institucion__iexact=e)).count()
+            items_clientes.append({
+                'tipo': 'entidad',
+                'texto': e,
+                'subtexto': 'Institución en tickets',
+                'cantidad': cant,
+                'accion': f'/dashboard/?q={e}',
+            })
+
+    if items_clientes:
+        grupos.append({
+            'titulo': 'Clientes / Instituciones',
+            'icono': 'fa-hospital',
+            'color': '#059669',
+            'items': items_clientes,
+        })
+
+    # ── 2. RESPONSABLES
+    responsables = qs.filter(responsable__icontains=q).exclude(
+        responsable__isnull=True
+    ).exclude(responsable='').values_list('responsable', flat=True).distinct()[:4]
+    if responsables:
+        items = []
+        seen_r = set()
+        for r in responsables:
+            r_clean = r.strip()
+            if r_clean.lower() not in seen_r:
+                seen_r.add(r_clean.lower())
+                cant = qs.filter(responsable__iexact=r_clean).count()
+                items.append({
+                    'tipo': 'responsable',
+                    'texto': r_clean,
+                    'subtexto': 'Personal asignado',
+                    'cantidad': cant,
+                    'accion': f'/dashboard/?q={r_clean}',
+                })
+        if items:
+            grupos.append({
+                'titulo': 'Responsables',
+                'icono': 'fa-user-tie',
+                'color': '#dc2626',
+                'items': items,
+            })
+
+    # ── 3. REGIONALES
+    for key, nombre in Ticket.REGIONAL_CHOICES:
+        if q.lower() in nombre.lower() or q.lower() in key.lower():
+            cant = qs.filter(regional=key).count()
+            if cant > 0:
+                if not any(g['titulo'] == 'Regionales' for g in grupos):
+                    grupos.append({
+                        'titulo': 'Regionales',
+                        'icono': 'fa-map-location-dot',
+                        'color': '#0ea5e9',
+                        'items': [],
+                    })
+                for g in grupos:
+                    if g['titulo'] == 'Regionales':
+                        g['items'].append({
+                            'tipo': 'regional',
+                            'texto': nombre,
+                            'subtexto': f'Código: {key}',
+                            'cantidad': cant,
+                            'accion': f'/dashboard/?q={nombre}',
+                        })
+
+    # ── 4. TICKETS ESPECÍFICOS (por ID)
+    if 'PQRS' in q.upper() or q.upper().startswith('#'):
+        tickets_match = qs.filter(ticket_id__icontains=q.replace('#', ''))[:5]
+        if tickets_match:
+            items = []
+            for t in tickets_match:
+                items.append({
+                    'tipo': 'ticket',
+                    'texto': t.ticket_id,
+                    'subtexto': f'{t.remitente_nombre or t.entidad_cliente or "—"} · {t.asunto[:40] if t.asunto else "—"}',
+                    'cantidad': None,
+                    'accion': f'/ticket/{t.ticket_id}/',
+                    'estado': t.get_estado_display(),
+                    'sla': t.estado_sla(),
+                })
+            grupos.append({
+                'titulo': 'Tickets',
+                'icono': 'fa-hashtag',
+                'color': '#3b82f6',
+                'items': items,
+            })
+
+    # ── 5. COINCIDENCIAS POR ASUNTO (últimos)
+    tickets_asunto = qs.filter(asunto__icontains=q)[:4]
+    if tickets_asunto:
+        items = []
+        for t in tickets_asunto:
+            items.append({
+                'tipo': 'ticket',
+                'texto': t.asunto[:55] if t.asunto else '—',
+                'subtexto': f'{t.ticket_id} · {t.remitente_nombre or t.entidad_cliente or "—"}',
+                'cantidad': None,
+                'accion': f'/ticket/{t.ticket_id}/',
+                'estado': t.get_estado_display(),
+                'sla': t.estado_sla(),
+            })
+        grupos.append({
+            'titulo': 'Coincidencias en Asunto',
+            'icono': 'fa-align-left',
+            'color': '#d97706',
+            'items': items,
+        })
+
+    return JsonResponse({'grupos': grupos})
+
+
+# ─────────────────────────────────────────────────────────────
+# CONTROL DE CAMBIOS (Changelog / Version Control)
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+@rol_requerido('superadmin')
+def control_cambios_view(request):
+    """Panel de control de cambios: muestra historial de commits, estado de sincronización
+    con producción y permite revertir cambios específicos."""
+    import subprocess
+    from pathlib import Path
+
+    repo_dir = Path(__file__).resolve().parent.parent.parent  # raíz del repo
+
+    def run_git(args, cwd=None):
+        """Ejecuta un comando git y retorna la salida."""
+        try:
+            result = subprocess.run(
+                ['git'] + args,
+                cwd=str(cwd or repo_dir),
+                capture_output=True, text=True, timeout=15,
+                encoding='utf-8', errors='replace'
+            )
+            return result.stdout.strip()
+        except Exception:
+            return ''
+
+    # Obtener commits recientes (últimos 30)
+    log_output = run_git([
+        'log', '--pretty=format:%H||%h||%an||%ad||%s', '--date=format:%d/%m/%Y %H:%M', '-30'
+    ])
+
+    commits = []
+    for line in (log_output.split('\n') if log_output else []):
+        parts = line.split('||')
+        if len(parts) >= 5:
+            msg = parts[4]
+            # Detectar tipo de commit por prefijo convencional
+            prefix_type = 'other'
+            msg_lower = msg.lower()
+            if msg_lower.startswith('feat') or '✨' in msg:
+                prefix_type = 'feat'
+            elif msg_lower.startswith('fix') or '🐛' in msg or 'fix:' in msg_lower:
+                prefix_type = 'fix'
+            elif msg_lower.startswith('ci') or msg_lower.startswith('config') or msg_lower.startswith('chore'):
+                prefix_type = 'ci'
+
+            commits.append({
+                'hash': parts[0],
+                'hash_short': parts[1],
+                'author': parts[2],
+                'date': parts[3],
+                'message': msg,
+                'prefix_type': prefix_type,
+                'is_in_prod': False,  # Se actualiza abajo
+            })
+
+    # Comparar con origin/main para detectar qué está en producción
+    commits_ahead = 0
+    try:
+        # Fetch silencioso para actualizar la referencia remota
+        run_git(['fetch', '--quiet'])
+        ahead_output = run_git(['rev-list', '--count', 'origin/main..HEAD'])
+        commits_ahead = int(ahead_output) if ahead_output.isdigit() else 0
+
+        # Obtener el hash del último commit en producción
+        prod_hash = run_git(['rev-parse', 'origin/main'])
+
+        # Marcar commits que ya están en producción
+        for i, commit in enumerate(commits):
+            if i >= commits_ahead:
+                commit['is_in_prod'] = True
+    except Exception:
+        pass
+
+    # Estado de sincronización
+    sync_status = 'synced' if commits_ahead == 0 else 'ahead'
+
+    # Cambios pendientes (no commiteados)
+    status_output = run_git(['status', '--short'])
+    cambios_pendientes = [l.strip() for l in status_output.split('\n') if l.strip()] if status_output else []
+
+    # Archivos modificados localmente
+    archivos_modificados = len(cambios_pendientes)
+
+    # Fecha del último commit
+    ultimo_commit_fecha = commits[0]['date'].split(' ')[0] if commits else 'N/A'
+
+    context = {
+        'commits': commits,
+        'total_commits': len(commits),
+        'commits_ahead': commits_ahead,
+        'sync_status': sync_status,
+        'cambios_pendientes': cambios_pendientes,
+        'archivos_modificados': archivos_modificados,
+        'ultimo_commit_fecha': ultimo_commit_fecha,
+        'perfil': request.user.perfil,
+        'nav_active': 'control_cambios',
+    }
+    return render(request, 'tickets/control_cambios.html', context)
+
+
+@login_required
+@rol_requerido('superadmin')
+def api_detalle_commit(request, commit_hash):
+    """Retorna los archivos modificados en un commit específico (vía AJAX)."""
+    import subprocess
+    from pathlib import Path
+
+    repo_dir = Path(__file__).resolve().parent.parent.parent
+
+    # Validar hash (seguridad)
+    if not all(c in '0123456789abcdefABCDEF' for c in commit_hash):
+        return JsonResponse({'error': 'Hash inválido.'}, status=400)
+
+    try:
+        result = subprocess.run(
+            ['git', 'diff-tree', '--no-commit-id', '-r', '--name-status', commit_hash],
+            cwd=str(repo_dir), capture_output=True, text=True, timeout=10,
+            encoding='utf-8', errors='replace'
+        )
+        files = []
+        for line in result.stdout.strip().split('\n'):
+            if line.strip():
+                parts = line.split('\t')
+                if len(parts) >= 2:
+                    files.append({
+                        'status': parts[0][0],  # M, A, D, R
+                        'path': parts[-1],
+                    })
+        return JsonResponse({'files': files})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@rol_requerido('superadmin')
+def api_diff_commit(request, commit_hash):
+    """Retorna el diff de un commit específico (vía AJAX)."""
+    import subprocess
+    from pathlib import Path
+
+    repo_dir = Path(__file__).resolve().parent.parent.parent
+
+    # Validar hash
+    if not all(c in '0123456789abcdefABCDEF' for c in commit_hash):
+        return JsonResponse({'error': 'Hash inválido.'}, status=400)
+
+    try:
+        result = subprocess.run(
+            ['git', 'diff', f'{commit_hash}~1', commit_hash, '--stat=120', '--no-color'],
+            cwd=str(repo_dir), capture_output=True, text=True, timeout=10,
+            encoding='utf-8', errors='replace'
+        )
+        # También obtener diff con contexto limitado
+        diff_result = subprocess.run(
+            ['git', 'diff', f'{commit_hash}~1', commit_hash, '--no-color', '-U3'],
+            cwd=str(repo_dir), capture_output=True, text=True, timeout=10,
+            encoding='utf-8', errors='replace'
+        )
+        diff_lines = diff_result.stdout.split('\n')[:500]  # Limitar a 500 líneas
+        return JsonResponse({'diff': diff_lines, 'stat': result.stdout})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@rol_requerido('superadmin')
+def api_revertir_commit(request, commit_hash):
+    """Revierte un commit específico creando un nuevo commit de reversión.
+    Solo funciona para commits que no están en producción."""
+    import subprocess
+    from pathlib import Path
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido.'}, status=405)
+
+    repo_dir = Path(__file__).resolve().parent.parent.parent
+
+    # Validar hash
+    if not all(c in '0123456789abcdefABCDEF' for c in commit_hash):
+        return JsonResponse({'error': 'Hash inválido.'}, status=400)
+
+    try:
+        # Verificar que el commit no está en producción
+        ahead_output = subprocess.run(
+            ['git', 'rev-list', '--count', 'origin/main..HEAD'],
+            cwd=str(repo_dir), capture_output=True, text=True, timeout=10,
+            encoding='utf-8', errors='replace'
+        )
+        commits_ahead = int(ahead_output.stdout.strip()) if ahead_output.stdout.strip().isdigit() else 0
+
+        local_commits = subprocess.run(
+            ['git', 'rev-list', 'origin/main..HEAD'],
+            cwd=str(repo_dir), capture_output=True, text=True, timeout=10,
+            encoding='utf-8', errors='replace'
+        )
+        local_hashes = local_commits.stdout.strip().split('\n') if local_commits.stdout.strip() else []
+
+        if commit_hash not in local_hashes:
+            return JsonResponse({
+                'success': False,
+                'error': 'Este commit ya está en producción y no se puede revertir desde aquí.'
+            })
+
+        # Ejecutar revert
+        result = subprocess.run(
+            ['git', 'revert', '--no-edit', commit_hash],
+            cwd=str(repo_dir), capture_output=True, text=True, timeout=30,
+            encoding='utf-8', errors='replace'
+        )
+
+        if result.returncode == 0:
+            # Log de auditoría
+            LogActividad.objects.create(
+                ticket=None, usuario=request.user,
+                accion=f'Commit revertido: {commit_hash[:7]}',
+                detalle=f'Revert ejecutado por: {request.user.get_full_name() or request.user.username}'
+            )
+            return JsonResponse({
+                'success': True,
+                'message': f'Commit {commit_hash[:7]} revertido exitosamente. Se creó un nuevo commit de reversión.'
+            })
+        else:
+            # Si hay conflictos, abortar
+            subprocess.run(
+                ['git', 'revert', '--abort'],
+                cwd=str(repo_dir), capture_output=True, text=True, timeout=10
+            )
+            return JsonResponse({
+                'success': False,
+                'error': f'No se pudo revertir automáticamente (conflictos). Detalle: {result.stderr[:200]}'
+            })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

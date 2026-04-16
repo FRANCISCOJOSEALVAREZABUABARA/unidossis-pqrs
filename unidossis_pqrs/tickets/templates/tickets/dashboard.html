@@ -81,7 +81,7 @@
                     <!-- Maintain existing filters -->
                     {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
                     {% if filtro_actual %}<input type="hidden" name="estado" value="{{ filtro_actual }}">{% endif %}
-                    
+                    <input type="hidden" name="view" value="kpi">
                     <div style="min-width: 320px;">
                         <select id="kpi-client-select" name="cliente_id" placeholder="Buscar cliente..." onchange="this.form.submit()">
                             <option value="">🏢 Todos los Clientes</option>
@@ -297,21 +297,56 @@
             <i class="fa-solid fa-chart-pie"></i> Ver KPI / SLA
         </button>
 
-        <!-- Search -->
-        <form class="search-bar" action="{% url 'dashboard' %}" method="GET" style="margin:0 0 0 auto;">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            {% if filtro_actual %}<input type="hidden" name="estado" value="{{ filtro_actual }}">{% endif %}
-            <input type="text" name="q" value="{{ request.GET.q|default_if_none:'' }}" placeholder="Buscar por ID, cliente o asunto...">
-            <button type="submit" style="display:none;"></button>
-        </form>
+        <!-- Premium Smart Search -->
+        <div class="smart-search-wrap" style="margin:0 0 0 auto; position:relative; width:380px;">
+            {% if cliente_filtrado_nombre %}
+            <!-- Badge de filtro activo -->
+            <div id="activeFilterBadge" style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:12px; margin-bottom:0;">
+                <i class="fa-solid fa-filter" style="color:var(--accent); font-size:12px;"></i>
+                <span style="font-size:12px; font-weight:700; color:var(--accent); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ cliente_filtrado_nombre }}</span>
+                <a href="{% url 'dashboard' %}{% if filtro_actual %}?estado={{ filtro_actual }}{% endif %}"
+                   style="width:22px; height:22px; border-radius:50%; background:#dbeafe; display:flex; align-items:center; justify-content:center; text-decoration:none; flex-shrink:0; transition:background 0.15s;"
+                   title="Limpiar filtro de cliente"
+                   onmouseenter="this.style.background='#bfdbfe'"
+                   onmouseleave="this.style.background='#dbeafe'">
+                    <i class="fa-solid fa-xmark" style="color:#1e40af; font-size:10px;"></i>
+                </a>
+            </div>
+            {% else %}
+            <div class="smart-search-box" id="smartSearchBox" style="position:relative;">
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--text-muted); font-size:13px; position:absolute; left:14px; top:50%; transform:translateY(-50%); pointer-events:none; z-index:2;"></i>
+                <input type="text" id="smartSearchInput" autocomplete="off" placeholder="Buscar: ID, cliente, email, asunto, regional..."
+                    style="width:100%; padding:10px 14px 10px 38px; border-radius:12px; border:1.5px solid var(--border); font-size:12.5px; font-weight:600; font-family:inherit; color:var(--text-main); background:white; outline:none; transition:all 0.25s;"
+                    onfocus="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 0 0 3px rgba(59,130,246,0.12)'"
+                    onblur="setTimeout(()=>{this.style.borderColor='var(--border)'; this.style.boxShadow='none'; document.getElementById('smartSearchDropdown').style.display='none';}, 200)"
+                >
+                <div id="smartSearchSpinner" style="display:none; position:absolute; right:14px; top:50%; transform:translateY(-50%);">
+                    <i class="fa-solid fa-spinner fa-spin" style="color:var(--accent); font-size:13px;"></i>
+                </div>
+            </div>
+            <!-- Dropdown de resultados -->
+            <div id="smartSearchDropdown" style="display:none; position:absolute; top:calc(100% + 6px); left:0; right:0; background:white; border-radius:14px; border:1px solid rgba(30,58,138,0.1); box-shadow:0 12px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06); max-height:440px; overflow-y:auto; z-index:500;">
+                <div id="smartSearchResults"></div>
+            </div>
+            {% endif %}
+        </div>
     </div>
 
     <!-- ═══════ TABLA PRINCIPAL ═══════ -->
     <div class="table-container" id="mainTable">
         <div class="card-header">
-            <h3 class="card-title"><i class="fa-solid fa-ticket" style="color:var(--accent);"></i> Listado de Tickets</h3>
+            <h3 class="card-title">
+                <i class="fa-solid fa-ticket" style="color:var(--accent);"></i>
+                Listado de Tickets
+                {% if cliente_filtrado_nombre %}
+                <span style="font-size:11px; font-weight:700; padding:3px 10px; background:#eff6ff; color:var(--accent); border:1px solid #bfdbfe; border-radius:20px; margin-left:8px;">
+                    <i class="fa-solid fa-filter" style="font-size:10px;"></i> {{ cliente_filtrado_nombre }}
+                </span>
+                {% endif %}
+            </h3>
             <span style="font-size:12px; font-weight:600; color:var(--text-muted); background:var(--bg); padding:3px 10px; border-radius:20px;">{{ cantidad_total|default:"0" }} caso{{ cantidad_total|pluralize:"s" }}</span>
         </div>
+
         <div class="table-responsive">
             <table class="pqrs-table">
                 <thead>
@@ -467,8 +502,10 @@
     if (viewKpiBtn && closeKpiBtn && kpiPanel && mainTable) {
         viewKpiBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            kpiPanel.style.display = 'block';
-            mainTable.style.display = 'none';
+            // Navegar con view=kpi para que el panel se mantenga abierto al recargar
+            const url = new URL(window.location.href);
+            url.searchParams.set('view', 'kpi');
+            window.location.href = url.toString();
         });
 
         closeKpiBtn.addEventListener('click', () => {
@@ -476,40 +513,43 @@
             mainTable.style.display = 'block';
         });
 
-        // Autopen KPI panel if the page reloaded due to selecting a client in the KPI filter or clearing it
+        // Autopen KPI panel SOLO si se viene desde el selector interno de KPI (view=kpi)
+        // NO abrir si cliente_id viene del buscador inteligente (view=tabla o sin view)
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('cliente_id') || urlParams.get('view') === 'kpi') {
+        const vistaActual = urlParams.get('view');
+        if (vistaActual === 'kpi') {
             kpiPanel.style.display = 'block';
             mainTable.style.display = 'none';
         }
     }
 
-    // Búsqueda en Vivo (AJAX)
+    // Búsqueda en Vivo (AJAX) - Legado, protegido contra ausencia del input
     const searchInput = document.querySelector('input[name="q"]');
-    let debounceTimer;
-    searchInput.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        const icon = document.querySelector('.search-icon');
-        icon.classList.replace('fa-magnifying-glass', 'fa-spinner');
-        icon.classList.add('fa-spin');
+    if (searchInput) {
+        let debounceTimer;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const icon = document.querySelector('.search-icon');
+            if (icon) { icon.classList.replace('fa-magnifying-glass', 'fa-spinner'); icon.classList.add('fa-spin'); }
 
-        debounceTimer = setTimeout(() => {
-            const url = new URL(window.location.href);
-            url.searchParams.set('q', this.value);
+            debounceTimer = setTimeout(() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('q', this.value);
 
-            fetch(url)
-                .then(r => r.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const newTbody = doc.querySelector('.pqrs-table tbody').innerHTML;
-                    document.querySelector('.pqrs-table tbody').innerHTML = newTbody;
-                    window.history.replaceState({}, '', url);
-                    icon.classList.replace('fa-spinner', 'fa-magnifying-glass');
-                    icon.classList.remove('fa-spin');
-                });
-        }, 300);
-    });
+                fetch(url)
+                    .then(r => r.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newTbody = doc.querySelector('.pqrs-table tbody');
+                        if (newTbody) document.querySelector('.pqrs-table tbody').innerHTML = newTbody.innerHTML;
+                        window.history.replaceState({}, '', url);
+                        if (icon) { icon.classList.replace('fa-spinner', 'fa-magnifying-glass'); icon.classList.remove('fa-spin'); }
+                    });
+            }, 300);
+        });
+    }
+
 
     // AI CHAT COPILOT
     function toggleAiChat() {
@@ -857,5 +897,148 @@ styleAC.textContent = `@keyframes acFadeIn { from { opacity:0; transform:transla
 document.head.appendChild(styleAC);
 </script>
 {% endif %}
+
+<!-- ═══ SMART SEARCH ENGINE ═══ -->
+<script>
+(function() {
+    const input = document.getElementById('smartSearchInput');
+    const dropdown = document.getElementById('smartSearchDropdown');
+    const results = document.getElementById('smartSearchResults');
+    const spinner = document.getElementById('smartSearchSpinner');
+    if (!input) return;
+
+    let timer;
+    let activeIndex = -1;
+
+    function highlight(text, query) {
+        if (!text || !query) return text || '';
+        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<mark style="background:#fef08a; color:#92400e; padding:0 1px; border-radius:2px; font-weight:700;">$1</mark>');
+    }
+
+    input.addEventListener('input', function() {
+        clearTimeout(timer);
+        const q = this.value.trim();
+        if (q.length < 2) {
+            dropdown.style.display = 'none';
+            spinner.style.display = 'none';
+            return;
+        }
+        spinner.style.display = 'block';
+        timer = setTimeout(() => {
+            fetch(`/api/buscar-tickets/?q=${encodeURIComponent(q)}`)
+                .then(r => r.json())
+                .then(data => {
+                    spinner.style.display = 'none';
+                    activeIndex = -1;
+
+                    if (!data.grupos || data.grupos.length === 0) {
+                        results.innerHTML = `
+                            <div style="padding:28px; text-align:center;">
+                                <i class="fa-solid fa-magnifying-glass" style="font-size:26px; color:#e2e8f0; margin-bottom:10px; display:block;"></i>
+                                <div style="font-size:13px; color:var(--text-muted); font-weight:600;">No se encontraron coincidencias para "${q}"</div>
+                                <div style="font-size:11px; color:var(--text-faint); margin-top:4px;">Intenta con el nombre del cliente, institución o ID del ticket</div>
+                            </div>`;
+                        dropdown.style.display = 'block';
+                        return;
+                    }
+
+                    let html = '';
+                    let itemCount = 0;
+
+                    data.grupos.forEach((grupo, gIdx) => {
+                        // Header del grupo
+                        html += `<div style="padding:8px 16px 4px; ${gIdx > 0 ? 'border-top:1.5px solid #f1f5f9; margin-top:2px;' : ''}">
+                            <div style="font-size:10px; font-weight:800; color:${grupo.color}; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid ${grupo.icono}" style="font-size:10px;"></i> ${grupo.titulo}
+                                <span style="font-size:9px; font-weight:600; color:var(--text-faint); margin-left:auto;">${grupo.items.length}</span>
+                            </div>
+                        </div>`;
+
+                        grupo.items.forEach((item, idx) => {
+                            const isTicket = item.tipo === 'ticket';
+                            const cantBadge = item.cantidad !== null && item.cantidad !== undefined
+                                ? `<span style="font-size:10px; font-weight:800; color:${grupo.color}; background:${grupo.color}10; padding:2px 8px; border-radius:6px; border:1px solid ${grupo.color}25; white-space:nowrap;">${item.cantidad} ticket${item.cantidad !== 1 ? 's' : ''}</span>`
+                                : '';
+
+                            const estadoBadge = item.estado
+                                ? `<span style="font-size:9px; font-weight:700; padding:2px 7px; border-radius:5px; background:#f1f5f9; color:var(--text-muted);">${item.estado}</span>`
+                                : '';
+
+                            html += `<a href="${item.accion}" class="ss-item" style="display:flex; align-items:center; padding:9px 16px; gap:12px; text-decoration:none; color:inherit; transition:all 0.15s; animation:ssFadeIn 0.18s ease both; animation-delay:${itemCount * 25}ms; cursor:pointer;"
+                                onmouseenter="this.style.background='#f0f7ff'"
+                                onmouseleave="this.style.background='white'">
+                                <div style="width:36px; height:36px; border-radius:10px; background:${grupo.color}10; border:1.5px solid ${grupo.color}25; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i class="fa-solid ${grupo.icono}" style="font-size:13px; color:${grupo.color};"></i>
+                                </div>
+                                <div style="flex:1; min-width:0;">
+                                    <div style="font-size:13px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${highlight(item.texto, q)}</div>
+                                    <div style="font-size:11px; color:var(--text-muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                        ${item.subtexto || ''}
+                                    </div>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                                    ${estadoBadge}
+                                    ${cantBadge}
+                                    <i class="fa-solid ${isTicket ? 'fa-arrow-up-right-from-square' : 'fa-filter'}" style="font-size:10px; color:#cbd5e1;"></i>
+                                </div>
+                            </a>`;
+                            itemCount++;
+                        });
+                    });
+
+                    // Footer: buscar en tabla general
+                    html += `<div style="padding:10px 16px; border-top:1.5px solid #f1f5f9; text-align:center; cursor:pointer; transition:background 0.15s;"
+                        onmouseenter="this.style.background='#f8fafc'"
+                        onmouseleave="this.style.background='white'"
+                        onclick="window.location.href='/dashboard/?q=${encodeURIComponent(q)}'">
+                        <span style="font-size:11px; font-weight:700; color:var(--accent);">
+                            <i class="fa-solid fa-magnifying-glass" style="margin-right:4px;"></i> Buscar "${q}" en todos los campos
+                        </span>
+                    </div>`;
+
+                    results.innerHTML = html;
+                    dropdown.style.display = 'block';
+                })
+                .catch(() => { spinner.style.display = 'none'; });
+        }, 250);
+    });
+
+    // Keyboard nav
+    input.addEventListener('keydown', function(e) {
+        const items = dropdown.querySelectorAll('.ss-item');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIndex = Math.min(activeIndex + 1, items.length - 1);
+            items.forEach((el, i) => el.style.background = i === activeIndex ? '#f0f7ff' : 'white');
+            if (items[activeIndex]) items[activeIndex].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = Math.max(activeIndex - 1, 0);
+            items.forEach((el, i) => el.style.background = i === activeIndex ? '#f0f7ff' : 'white');
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIndex >= 0 && items[activeIndex]) {
+                window.location.href = items[activeIndex].getAttribute('href');
+            } else if (this.value.trim().length >= 2) {
+                window.location.href = `/dashboard/?q=${encodeURIComponent(this.value.trim())}`;
+            }
+        } else if (e.key === 'Escape') {
+            dropdown.style.display = 'none';
+            this.blur();
+        }
+    });
+
+    // Inject animations
+    const ssStyle = document.createElement('style');
+    ssStyle.textContent = `
+        @keyframes ssFadeIn { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
+        #smartSearchDropdown::-webkit-scrollbar { width:4px; }
+        #smartSearchDropdown::-webkit-scrollbar-thumb { background:#CBD5E1; border-radius:4px; }
+        @media(max-width:768px) { .smart-search-wrap { width:100% !important; } }
+    `;
+    document.head.appendChild(ssStyle);
+})();
+</script>
 
 {% endblock %}

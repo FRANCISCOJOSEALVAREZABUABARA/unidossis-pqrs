@@ -54,18 +54,21 @@ echo ✅ Codigo subido a GitHub correctamente.
 
 :: ─── Paso 4: Actualizar PythonAnywhere via API ───
 echo.
-echo [4/5] 🌐 Ejecutando git pull en PythonAnywhere...
+echo [4/5] 🌐 Ejecutando git pull + pip install en PythonAnywhere...
 
 powershell -ExecutionPolicy Bypass -Command ^
   "$token='8e2dc791cf64cf2b10b6b89e83d4aa72e2ef23ba'; " ^
   "$headers=@{Authorization=\"Token $token\"; 'Content-Type'='application/json'}; " ^
   "try { " ^
-  "  $body = '{\"command\": \"cd ~/unidossis-pqrs && git pull\", \"schedule\": \"once\"}'; " ^
+  "  $cmd = 'cd ~/unidossis-pqrs && git pull && source ~/.virtualenvs/unidossis/bin/activate && pip install -r unidossis_pqrs/requirements.txt --quiet'; " ^
+  "  $body = '{\"command\": \"' + $cmd + '\", \"schedule\": \"once\"}'; " ^
   "  $r = Invoke-RestMethod -Uri 'https://www.pythonanywhere.com/api/v0/user/Unidossis/schedule/' -Method POST -Headers $headers -Body $body -ErrorAction Stop; " ^
-  "  Write-Host '   ✅ Tarea de git pull programada.' -ForegroundColor Green; " ^
+  "  Write-Host '   ✅ git pull + pip install programados.' -ForegroundColor Green; " ^
   "} catch { " ^
-  "  Write-Host '   ⚠️  Git pull automatico no disponible.' -ForegroundColor Yellow; " ^
-  "  Write-Host '   👉 Ve a pythonanywhere.com > Bash > cd ~/unidossis-pqrs && git pull' -ForegroundColor White; " ^
+  "  Write-Host '   ⚠️  Automatico no disponible. Hazlo manualmente:' -ForegroundColor Yellow; " ^
+  "  Write-Host '   👉 cd ~/unidossis-pqrs ^&^& git pull' -ForegroundColor White; " ^
+  "  Write-Host '   👉 source ~/.virtualenvs/unidossis/bin/activate' -ForegroundColor White; " ^
+  "  Write-Host '   👉 pip install -r unidossis_pqrs/requirements.txt' -ForegroundColor White; " ^
   "}"
 
 :: ─── Paso 5: Recargar web app ───

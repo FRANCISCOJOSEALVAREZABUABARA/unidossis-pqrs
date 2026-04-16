@@ -211,7 +211,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' %}
+                    {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' or perfil.rol == 'supervisor' %}
                     <div class="form-group">
                         <label><i class="fa-solid fa-map-location-dot" style="color:var(--accent); margin-right:4px;"></i> Regional Asignada</label>
                         <select name="regional" class="form-control">
