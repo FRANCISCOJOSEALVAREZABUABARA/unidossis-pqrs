@@ -346,8 +346,9 @@ def ticket_detail_view(request, ticket_id):
         if not puede_ver and not request.user.is_superuser:
             return redirect('acceso_denegado')
 
-    adjuntos_cliente = ticket.archivos_adjuntos.filter(es_respuesta_agente=False)
+    adjuntos_cliente = ticket.archivos_adjuntos.filter(es_respuesta_agente=False, es_soporte_interno=False)
     adjuntos_unidossis = ticket.archivos_adjuntos.filter(es_respuesta_agente=True)
+    adjuntos_internos = ticket.archivos_adjuntos.filter(es_soporte_interno=True)
     comentarios = ticket.comentarios.all()
     logs = ticket.logs.all()[:20]
 
@@ -363,11 +364,23 @@ def ticket_detail_view(request, ticket_id):
         linea = request.POST.get('linea_servicio')
         tipificacion = request.POST.get('tipificacion')
         criticidad = request.POST.get('criticidad')
+        regional = request.POST.get('regional')
 
         if proceso: ticket.proceso = proceso
         if linea: ticket.linea_servicio = linea
         if tipificacion: ticket.tipificacion = tipificacion
         if criticidad: ticket.criticidad = criticidad
+
+        # Regional: solo superadmin y admin_pqrs pueden cambiarla
+        if regional is not None and perfil.rol in ('superadmin', 'admin_pqrs'):
+            regional_anterior = ticket.regional
+            ticket.regional = regional
+            if regional != regional_anterior:
+                LogActividad.objects.create(
+                    ticket=ticket, usuario=request.user,
+                    accion=f'Regional cambiada: {regional_anterior or "N/A"} → {regional or "N/A"}',
+                    detalle=f'Cambiado por: {request.user.get_full_name() or request.user.username}'
+                )
 
         responsable_manual = request.POST.get('responsable')
         if responsable_manual: ticket.responsable = responsable_manual
@@ -385,13 +398,23 @@ def ticket_detail_view(request, ticket_id):
                 detalle=f'Cambiado por: {request.user.get_full_name() or request.user.username}'
             )
 
-        # Archivos adjuntos del agente
+        # Archivos adjuntos del agente (respuesta al cliente)
         if request.FILES.getlist('archivos_agente'):
             for archivo_subido in request.FILES.getlist('archivos_agente'):
                 ArchivoAdjunto.objects.create(
                     ticket=ticket,
                     archivo=archivo_subido,
                     es_respuesta_agente=True,
+                    subido_por_sistema=False
+                )
+
+        # Soportes y evidencias internas (no visibles para el cliente)
+        if request.FILES.getlist('soportes_internos'):
+            for archivo_subido in request.FILES.getlist('soportes_internos'):
+                ArchivoAdjunto.objects.create(
+                    ticket=ticket,
+                    archivo=archivo_subido,
+                    es_soporte_interno=True,
                     subido_por_sistema=False
                 )
 
@@ -411,6 +434,7 @@ def ticket_detail_view(request, ticket_id):
         'ticket': ticket,
         'adjuntos_cliente': adjuntos_cliente,
         'adjuntos_unidossis': adjuntos_unidossis,
+        'adjuntos_internos': adjuntos_internos,
         'comentarios': comentarios,
         'logs': logs,
         'STATUS_CHOICES': Ticket.STATUS_CHOICES,
@@ -418,6 +442,7 @@ def ticket_detail_view(request, ticket_id):
         'LINEA_CHOICES': Ticket.LINEA_CHOICES,
         'TIPIFICACION_CHOICES': Ticket.TIPIFICACION_CHOICES,
         'CRITICIDAD_CHOICES': Ticket.CRITICIDAD_CHOICES,
+        'REGIONAL_CHOICES': Ticket.REGIONAL_CHOICES,
         'perfil': perfil,
         'nav_active': 'dashboard',
         'cliente': perfil.cliente if perfil.rol == 'cliente' else None,

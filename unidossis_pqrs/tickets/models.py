@@ -148,6 +148,7 @@ class ArchivoAdjunto(models.Model):
     archivo = models.FileField(upload_to='adjuntos_pqrs/', verbose_name="Archivo Adjunto")
     subido_por_sistema = models.BooleanField(default=False, verbose_name="¿Descargado del correo?")
     es_respuesta_agente = models.BooleanField(default=False, verbose_name="Adjuntado por Unidossis en la Respuesta")
+    es_soporte_interno = models.BooleanField(default=False, verbose_name="Soporte/Evidencia Interna de Gestión")
     fecha_subida = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

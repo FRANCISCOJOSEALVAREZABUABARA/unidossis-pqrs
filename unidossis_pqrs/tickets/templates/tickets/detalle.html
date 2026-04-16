@@ -211,31 +211,89 @@
                             {% endfor %}
                         </select>
                     </div>
+                    {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' %}
                     <div class="form-group">
-                        <label>Respuesta Oficial</label>
-                        <textarea name="respuesta_oficial" class="form-control" rows="6" placeholder="Escribe la respuesta formal para el cliente...">{{ ticket.respuesta_oficial|default:'' }}</textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Adjuntar Documento de Respuesta</label>
-                        <input type="file" name="archivos_agente" multiple class="form-control" style="font-size:12px; padding:8px;">
-                    </div>
-                    {% if adjuntos_unidossis %}
-                    <div style="margin-bottom:16px;">
-                        <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:8px;">Respuestas Adjuntas</label>
-                        {% for adj in adjuntos_unidossis %}
-                        <a href="{{ adj.archivo.url }}" target="_blank" class="attachment-item">
-                            <i class="fa-solid fa-file" style="font-size:14px;"></i>
-                            <span style="font-size:12px; flex:1;">{{ adj.archivo.name|slice:"10:" }}</span>
-                        </a>
-                        {% endfor %}
+                        <label><i class="fa-solid fa-map-location-dot" style="color:var(--accent); margin-right:4px;"></i> Regional Asignada</label>
+                        <select name="regional" class="form-control">
+                            <option value="">— Sin asignar —</option>
+                            {% for k, v in REGIONAL_CHOICES %}
+                            <option value="{{ k }}" {% if ticket.regional == k %}selected{% endif %}>{{ v }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     {% endif %}
-                    <button type="submit" class="btn-save">
-                        <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
-                    </button>
-                    <button type="submit" name="cerrar_y_enviar" class="btn-close-ticket" onclick="return confirm('¿Confirma el cierre de este caso? Se enviará la respuesta y encuesta CSAT al cliente.')">
-                        <i class="fa-solid fa-check-circle"></i> Cerrar y Notificar al Cliente
-                    </button>
+
+                    <!-- ═══ SECCIÓN 1: RESPUESTA OFICIAL AL CLIENTE ═══ -->
+                    <div style="margin-top:20px; border-top:2px solid var(--border); padding-top:18px;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                            <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #dbeafe, #eff6ff); border:1.5px solid #bfdbfe; display:flex; align-items:center; justify-content:center;">
+                                <i class="fa-solid fa-envelope-open-text" style="color:var(--accent); font-size:15px;"></i>
+                            </div>
+                            <div>
+                                <div style="font-size:13px; font-weight:800; color:var(--primary);">Respuesta Oficial al Cliente</div>
+                                <div style="font-size:10.5px; color:var(--text-muted); font-weight:500;">👁️ Este texto será visible en el portal del cliente</div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <textarea name="respuesta_oficial" class="form-control" rows="6" placeholder="Redacte la respuesta formal que recibirá el cliente..." style="border:1.5px solid #bfdbfe; background:#fafcff;">{{ ticket.respuesta_oficial|default:'' }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size:11.5px; font-weight:700; color:var(--text-muted);"><i class="fa-solid fa-file-lines" style="margin-right:4px; color:var(--accent);"></i> Adjuntar Documento de Respuesta al Cliente</label>
+                            <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Documentos que el cliente podrá descargar desde su portal</div>
+                            <input type="file" name="archivos_agente" multiple class="form-control" style="font-size:12px; padding:8px;">
+                        </div>
+                        {% if adjuntos_unidossis %}
+                        <div style="margin-bottom:8px;">
+                            <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:8px;"><i class="fa-solid fa-check-circle" style="color:var(--success); margin-right:4px;"></i> Documentos de Respuesta Adjuntos</label>
+                            {% for adj in adjuntos_unidossis %}
+                            <a href="{{ adj.archivo.url }}" target="_blank" class="attachment-item">
+                                <i class="fa-solid fa-file-pdf" style="font-size:14px; color:var(--accent);"></i>
+                                <span style="font-size:12px; flex:1;">{{ adj.archivo.name|slice:"10:" }}</span>
+                                <i class="fa-solid fa-download" style="color:var(--text-faint); font-size:11px;"></i>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- ═══ SECCIÓN 2: SOPORTES Y EVIDENCIAS INTERNAS ═══ -->
+                    <div style="margin-top:20px; border-top:2px solid var(--border); padding-top:18px;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                            <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #fef3c7, #fffbeb); border:1.5px solid #fde68a; display:flex; align-items:center; justify-content:center;">
+                                <i class="fa-solid fa-folder-open" style="color:#d97706; font-size:15px;"></i>
+                            </div>
+                            <div>
+                                <div style="font-size:13px; font-weight:800; color:var(--primary);">Soportes y Evidencias de Gestión</div>
+                                <div style="font-size:10.5px; color:var(--text-muted); font-weight:500;">🔒 Solo visible internamente — No lo ve el cliente</div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size:11.5px; font-weight:700; color:var(--text-muted);"><i class="fa-solid fa-upload" style="margin-right:4px; color:#d97706;"></i> Subir Soportes Internos</label>
+                            <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Actas, correos, formatos, fotos de investigación, etc.</div>
+                            <input type="file" name="soportes_internos" multiple class="form-control" style="font-size:12px; padding:8px;">
+                        </div>
+                        {% if adjuntos_internos %}
+                        <div style="margin-bottom:8px;">
+                            <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:8px;"><i class="fa-solid fa-lock" style="color:#d97706; margin-right:4px;"></i> Soportes Archivados</label>
+                            {% for adj in adjuntos_internos %}
+                            <a href="{{ adj.archivo.url }}" target="_blank" class="attachment-item" style="border-color:#fde68a;">
+                                <i class="fa-solid fa-file-shield" style="font-size:14px; color:#d97706;"></i>
+                                <span style="font-size:12px; flex:1;">{{ adj.archivo.name|slice:"10:" }}</span>
+                                <i class="fa-solid fa-download" style="color:var(--text-faint); font-size:11px;"></i>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+                        <button type="submit" class="btn-save">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+                        </button>
+                        <button type="submit" name="cerrar_y_enviar" class="btn-close-ticket" onclick="return confirm('¿Confirma el cierre de este caso? Se enviará la respuesta y encuesta CSAT al cliente.')">
+                            <i class="fa-solid fa-check-circle"></i> Cerrar y Notificar al Cliente
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

@@ -58,18 +58,14 @@ echo [4/5] 🌐 Ejecutando git pull en PythonAnywhere...
 
 powershell -ExecutionPolicy Bypass -Command ^
   "$token='8e2dc791cf64cf2b10b6b89e83d4aa72e2ef23ba'; " ^
-  "$headers=@{Authorization=\"Token $token\"; 'Content-Type'='application/x-www-form-urlencoded'}; " ^
+  "$headers=@{Authorization=\"Token $token\"; 'Content-Type'='application/json'}; " ^
   "try { " ^
-  "  $console = Invoke-RestMethod -Uri 'https://www.pythonanywhere.com/api/v0/user/Unidossis/consoles/' -Method POST -Headers $headers -Body 'executable=bash&arguments=&working_directory=/home/Unidossis'; " ^
-  "  $cid = $console.id; " ^
-  "  Write-Host \"   Consola $cid creada...\" -ForegroundColor Gray; " ^
-  "  Invoke-RestMethod -Uri \"https://www.pythonanywhere.com/api/v0/user/Unidossis/consoles/$cid/send_input/\" -Method POST -Headers $headers -Body 'input=cd+~/unidossis-pqrs+%%26%%26+git+pull%%0A' | Out-Null; " ^
-  "  Write-Host '   Git pull enviado, esperando 8 segundos...' -ForegroundColor Gray; " ^
-  "  Start-Sleep -Seconds 8; " ^
-  "  Invoke-RestMethod -Uri \"https://www.pythonanywhere.com/api/v0/user/Unidossis/consoles/$cid/\" -Method DELETE -Headers $headers -ErrorAction SilentlyContinue | Out-Null; " ^
-  "  Write-Host '   ✅ Git pull completado.' -ForegroundColor Green; " ^
+  "  $body = '{\"command\": \"cd ~/unidossis-pqrs && git pull\", \"schedule\": \"once\"}'; " ^
+  "  $r = Invoke-RestMethod -Uri 'https://www.pythonanywhere.com/api/v0/user/Unidossis/schedule/' -Method POST -Headers $headers -Body $body -ErrorAction Stop; " ^
+  "  Write-Host '   ✅ Tarea de git pull programada.' -ForegroundColor Green; " ^
   "} catch { " ^
-  "  Write-Host \"   ⚠️ Error en git pull: $($_.Exception.Message)\" -ForegroundColor Yellow; " ^
+  "  Write-Host '   ⚠️  Git pull automatico no disponible.' -ForegroundColor Yellow; " ^
+  "  Write-Host '   👉 Ve a pythonanywhere.com > Bash > cd ~/unidossis-pqrs && git pull' -ForegroundColor White; " ^
   "}"
 
 :: ─── Paso 5: Recargar web app ───

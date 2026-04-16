@@ -1,29 +1,297 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error de Sistema - UNIDOSSIS</title>
+    <title>Error del Sistema | UNIDOSSIS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { background: linear-gradient(135deg, #FEF2F2 0%, #FFF1F2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .error-card { background: white; border-radius: 24px; padding: 60px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.08); max-width: 500px; }
-        .error-code { font-size: 6rem; font-weight: 800; color: #dc2626; letter-spacing: -4px; line-height: 1; }
-        h2 { font-size: 1.4rem; color: #1e293b; margin-top: 16px; font-weight: 700; }
-        p { color: #64748b; font-size: 14px; margin-top: 12px; line-height: 1.6; }
-        .btn-back { display: inline-block; margin-top: 28px; padding: 12px 28px; background: #1e3a8a; color: white; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(30,58,138,0.3); }
-        .btn-back:hover { background: #1e40af; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(30,58,138,0.35); }
+        :root {
+            --primary: #0f172a;
+            --accent: #3b82f6;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --bg: #f8fafc;
+        }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .error-container {
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+        }
+        .error-icon {
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border: 2px solid #fca5a5;
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 32px; color: var(--danger);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .error-title {
+            font-size: 28px; font-weight: 800; color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .error-subtitle {
+            font-size: 14px; color: var(--text-muted); margin-bottom: 30px;
+        }
+        .error-code-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--primary); color: white;
+            padding: 8px 18px; border-radius: 999px;
+            font-size: 13px; font-weight: 700;
+            margin-bottom: 28px;
+            letter-spacing: 0.5px;
+        }
+        .error-code-badge i { color: #f87171; }
+        .error-panel {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid rgba(30,58,138,0.08);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            padding: 28px;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .panel-header {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 16px; padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .panel-header i { color: var(--accent); font-size: 16px; }
+        .panel-header span { font-size: 14px; font-weight: 800; color: var(--primary); }
+        .code-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .code-table th {
+            background: #f8fafc; padding: 8px 12px;
+            font-size: 10px; text-transform: uppercase;
+            letter-spacing: 0.5px; color: var(--text-muted);
+            font-weight: 700; text-align: left;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .code-table td {
+            padding: 10px 12px; border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+        }
+        .code-table tr:last-child td { border-bottom: none; }
+        .code-table tr:hover td { background: #f0f7ff; }
+        .code-tag {
+            display: inline-block; padding: 3px 10px;
+            border-radius: 6px; font-size: 11px; font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+        .code-tag.db { background: #fef3c7; color: #92400e; }
+        .code-tag.tpl { background: #dbeafe; color: #1e40af; }
+        .code-tag.auth { background: #fce7f3; color: #9d174d; }
+        .code-tag.net { background: #e0e7ff; color: #3730a3; }
+        .code-tag.file { background: #d1fae5; color: #065f46; }
+        .code-tag.cfg { background: #f5f3ff; color: #5b21b6; }
+        .desc-text { color: var(--text-muted); font-size: 11.5px; margin-top: 2px; }
+        .action-text { color: var(--text-main); font-weight: 600; font-size: 12px; }
+        .error-detail-box {
+            background: #1e293b; color: #94a3b8;
+            padding: 16px 20px; border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px; line-height: 1.6;
+            margin-top: 16px; text-align: left;
+            max-height: 120px; overflow-y: auto;
+        }
+        .error-detail-box .err-type { color: #f87171; font-weight: 700; }
+        .error-detail-box .err-path { color: #60a5fa; }
+        .error-detail-box .err-time { color: #fbbf24; }
+        .btn-actions {
+            display: flex; gap: 12px; justify-content: center;
+            margin-top: 24px; flex-wrap: wrap;
+        }
+        .btn-action {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 22px; border-radius: 10px;
+            font-size: 13px; font-weight: 700;
+            text-decoration: none; transition: all 0.2s;
+            cursor: pointer; border: none;
+        }
+        .btn-primary {
+            background: var(--accent); color: white;
+            box-shadow: 0 2px 10px rgba(59,130,246,0.3);
+        }
+        .btn-primary:hover { background: #2563eb; transform: translateY(-2px); }
+        .btn-secondary {
+            background: white; color: var(--text-main);
+            border: 1px solid #e2e8f0;
+        }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
     </style>
 </head>
 <body>
-    <div class="error-card">
-        <div class="error-code">500</div>
-        <h2>Algo no salió como esperábamos.</h2>
-        <p>Hemos registrado este error en nuestro sistema interno y el equipo técnico ya fue notificado.</p>
-        <a href="/login/" class="btn-back">← Volver al Inicio Seguro</a>
+    <div class="error-container">
+        <div class="error-icon">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h1 class="error-title">Algo salió mal</h1>
+        <p class="error-subtitle">El sistema encontró un error inesperado. Usa la tabla de códigos para identificar el tipo de falla.</p>
+
+        {% if error_code %}
+        <div class="error-code-badge">
+            <i class="fa-solid fa-bug"></i>
+            Código: {{ error_code }}
+        </div>
+        {% endif %}
+
+        {% if error_detail %}
+        <div class="error-detail-box">
+            <span class="err-time">{{ error_time }}</span><br>
+            <span class="err-type">{{ error_type }}</span>: {{ error_message }}<br>
+            <span class="err-path">Ruta: {{ error_path }}</span>
+        </div>
+        {% endif %}
+
+        <div class="error-panel" style="margin-top:20px;">
+            <div class="panel-header">
+                <i class="fa-solid fa-list-check"></i>
+                <span>Catálogo de Códigos de Error — UNIDOSSIS PQRS</span>
+            </div>
+            <table class="code-table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Categoría</th>
+                        <th>Causa Probable</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="code-tag db">DB-001</span></td>
+                        <td>Base de Datos</td>
+                        <td>
+                            <div class="action-text">Columna no existe</div>
+                            <div class="desc-text">Falta ejecutar migración después de cambios al modelo</div>
+                        </td>
+                        <td><div class="desc-text"><code>python manage.py makemigrations && python manage.py migrate</code></div></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-tag db">DB-002</span></td>
+                        <td>Base de Datos</td>
+                        <td>
+                            <div class="action-text">Tabla no existe</div>
+                            <div class="desc-text">La base de datos no tiene la tabla esperada</div>
+                        </td>
+                        <td><div class="desc-text"><code>python manage.py migrate</code></div></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-tag db">DB-003</span></td>
+                        <td>Base de Datos</td>
+                        <td>
+                            <div class="action-text">Base de datos bloqueada</div>
+                            <div class="desc-text">SQLite está siendo usada por otro proceso/operación larga</div>
+                        </td>
+                        <td><div class="desc-text">Reiniciar servidor. Si persiste, cerrar otras consolas conectadas</div></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-tag tpl">TPL-001</span></td>
+                        <td>Template</td>
+                        <td>
+                            <div class="action-text">Error de sintaxis en HTML</div>
+                            <div class="desc-text">Tag o filtro mal formado en un template Django</div>
+                        </td>
+                        <td><div class="desc-text">Revisar el archivo .html indicado en el error</div></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-tag tpl">TPL-002</span></td>
+                        <td>Template</td>
+                        <td>
+                            <div class="action-text">Variable no encontrada</div>
+                            <div class="desc-text">La vista no pasa una variable que el template necesita</div>
+                        </td>
+                        <td><div class="desc-text">Verificar el contexto en la vista (views.py)</div></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-tag auth">AUTH-001</span></td>
+                        <td>Autenticación</td>
+                        <td>
+                            <div class="action-text">Sesión expirada</div>
+                            <div class="desc-text">El token de sesión ya no es válido</div>
+                        </td>
+                        <td><div class="desc-text">Cerrar sesión y volver a iniciar</div></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-tag auth">AUTH-002</span></td>
+                        <td>Autenticación</td>
+                        <td>
+                            <div class="action-text">Cuenta bloqueada</div>
+                            <div class="desc-text">Demasiados intentos fallidos de login (máx. 5)</div>
+                        </td>
+                        <td><div class="desc-text">Esperar 15 minutos o contactar al administrador</div></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-tag net">NET-001</span></td>
+                        <td>Red / API</td>
+                        <td>
+                            <div class="action-text">Timeout de conexión</div>
+                            <div class="desc-text">Servicio externo (IA, correo) no respondió a tiempo</div>
+                        </td>
+                        <td><div class="desc-text">Reintentar. Si persiste, verificar conectividad a internet</div></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-tag file">FILE-001</span></td>
+                        <td>Archivos</td>
+                        <td>
+                            <div class="action-text">Archivo no encontrado</div>
+                            <div class="desc-text">Se intentó acceder a un adjunto que ya no existe</div>
+                        </td>
+                        <td><div class="desc-text">Verificar la carpeta <code>media/adjuntos_pqrs/</code></div></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-tag cfg">CFG-001</span></td>
+                        <td>Configuración</td>
+                        <td>
+                            <div class="action-text">Variable de entorno faltante</div>
+                            <div class="desc-text">GEMINI_API_KEY, SECRET_KEY u otra variable no configurada</div>
+                        </td>
+                        <td><div class="desc-text">Verificar <code>.env</code> o variables de entorno del sistema</div></td>
+                    </tr>
+                    <tr>
+                        <td><span class="code-tag cfg">CFG-002</span></td>
+                        <td>Configuración</td>
+                        <td>
+                            <div class="action-text">Servidor no inicia</div>
+                            <div class="desc-text">Puerto 8000 ocupado o error en settings.py</div>
+                        </td>
+                        <td><div class="desc-text">Reiniciar INICIAR_SISTEMA.bat. Cerrar otras instancias</div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="btn-actions">
+            <a href="/dashboard/" class="btn-action btn-primary">
+                <i class="fa-solid fa-house"></i> Ir al Dashboard
+            </a>
+            <a href="javascript:history.back()" class="btn-action btn-secondary">
+                <i class="fa-solid fa-arrow-left"></i> Volver
+            </a>
+            <a href="javascript:location.reload()" class="btn-action btn-secondary">
+                <i class="fa-solid fa-rotate-right"></i> Reintentar
+            </a>
+        </div>
     </div>
 </body>
 </html>

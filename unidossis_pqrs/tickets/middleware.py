@@ -52,13 +52,84 @@ class MonitorRendimientoMiddleware:
         return response
 
     def process_exception(self, request, exception):
-        """Captura excepciones no manejadas y las registra."""
+        """Captura excepciones no manejadas, las clasifica con códigos y renderiza error 500 premium."""
         ruta = request.path
         usuario = request.user.username if hasattr(request, 'user') and request.user.is_authenticated else 'anónimo'
+        error_type = type(exception).__name__
+        error_msg = str(exception)
+
+        # ── Clasificación de errores ──
+        error_code = self._classify_error(error_type, error_msg)
 
         logger_errores.error(
-            f'💥 EXCEPCIÓN en {ruta} | usuario: {usuario} | '
-            f'{type(exception).__name__}: {str(exception)}\n'
+            f'💥 [{error_code}] EXCEPCIÓN en {ruta} | usuario: {usuario} | '
+            f'{error_type}: {error_msg}\n'
             f'{traceback.format_exc()}'
         )
-        return None  # Deja que Django maneje el error normalmente
+
+        # Renderizar página 500 premium con catálogo
+        from django.template.loader import render_to_string
+        from django.http import HttpResponseServerError
+        from django.utils import timezone
+        try:
+            html = render_to_string('500.html', {
+                'error_code': error_code,
+                'error_type': error_type,
+                'error_message': error_msg[:200],
+                'error_path': ruta,
+                'error_time': timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'error_detail': True,
+            })
+            return HttpResponseServerError(html)
+        except Exception:
+            return None  # Fallback a Django default si falla el render
+
+    @staticmethod
+    def _classify_error(error_type, error_msg):
+        """Clasifica el error en un código de catálogo."""
+        msg_lower = error_msg.lower()
+
+        # DB — Base de datos
+        if 'OperationalError' in error_type:
+            if 'no such column' in msg_lower:
+                return 'DB-001'
+            elif 'no such table' in msg_lower:
+                return 'DB-002'
+            elif 'database is locked' in msg_lower:
+                return 'DB-003'
+            return 'DB-099'
+
+        if 'IntegrityError' in error_type:
+            return 'DB-004'
+
+        # TPL — Templates
+        if 'TemplateSyntaxError' in error_type:
+            return 'TPL-001'
+        if 'TemplateDoesNotExist' in error_type:
+            return 'TPL-002'
+
+        # AUTH — Autenticación
+        if 'PermissionDenied' in error_type:
+            return 'AUTH-001'
+
+        # NET — Red / API
+        if 'ConnectionError' in error_type or 'Timeout' in error_type:
+            return 'NET-001'
+
+        # FILE — Archivos
+        if 'FileNotFoundError' in error_type or 'SuspiciousFileOperation' in error_type:
+            return 'FILE-001'
+
+        # CFG — Configuración
+        if 'ImproperlyConfigured' in error_type:
+            return 'CFG-001'
+
+        # General
+        if 'ValueError' in error_type:
+            return 'SYS-001'
+        if 'KeyError' in error_type:
+            return 'SYS-002'
+        if 'AttributeError' in error_type:
+            return 'SYS-003'
+
+        return 'SYS-099'
