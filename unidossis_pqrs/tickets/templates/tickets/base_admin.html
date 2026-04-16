@@ -1,6 +1,47 @@
 {% extends "tickets/base.html" %}
 {% load static %}
 
+{% block extra_css %}
+<style>
+/* Sidebar toggle premium — override garantizado para producción */
+.sidebar-toggle {
+    position: fixed !important;
+    top: 38px !important;
+    left: calc(var(--sidebar-width, 260px) - 16px) !important;
+    width: 32px !important;
+    height: 32px !important;
+    background: white !important;
+    color: var(--accent, #3b82f6) !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    border: 2px solid #bfdbfe !important;
+    z-index: 300 !important;
+    box-shadow: 0 2px 12px rgba(59,130,246,0.25), 0 1px 4px rgba(0,0,0,0.08) !important;
+    transition: left 0.3s ease, transform 0.3s ease, box-shadow 0.2s, background 0.2s !important;
+}
+.sidebar-toggle:hover {
+    background: var(--accent, #3b82f6) !important;
+    color: white !important;
+    border-color: var(--accent, #3b82f6) !important;
+    box-shadow: 0 4px 16px rgba(59,130,246,0.4) !important;
+    transform: scale(1.08) !important;
+}
+.sidebar.collapsed .sidebar-toggle {
+    left: calc(var(--sidebar-collapsed, 72px) - 16px) !important;
+    transform: rotate(180deg) !important;
+}
+.sidebar.collapsed .sidebar-toggle:hover {
+    transform: rotate(180deg) scale(1.08) !important;
+    background: var(--accent, #3b82f6) !important;
+    color: white !important;
+}
+</style>
+{% endblock %}
+
 {% block body %}
 <div class="app-container">
     <!-- ═══════ SIDEBAR ADMIN UNIFICADO ═══════ -->
