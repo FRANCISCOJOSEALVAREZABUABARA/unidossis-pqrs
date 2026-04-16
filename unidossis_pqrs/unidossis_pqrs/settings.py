@@ -58,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'tickets.middleware.MonitorRendimientoMiddleware',  # ← Monitor de rendimiento
 ]
 
 ROOT_URLCONF = 'unidossis_pqrs.urls'
@@ -175,7 +176,11 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Unidossis PQRS <soporte@un
 #   WHATSAPP_PHONE_ID=tu_phone_id
 # Gratis hasta 1,000 conversaciones/mes con Meta Business API.
 
-# ─── Logging ──────────────────────────────────────────────────
+# ─── Logging y Monitoreo ─────────────────────────────────────
+import os as _os
+_LOG_DIR = BASE_DIR / 'logs'
+_LOG_DIR.mkdir(exist_ok=True)  # Crear carpeta de logs si no existe
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -184,13 +189,25 @@ LOGGING = {
             'format': '[{asctime}] {levelname} {name}: {message}',
             'style': '{',
         },
+        'rendimiento': {
+            'format': '[{asctime}] {message}',
+            'style': '{',
+        },
     },
     'handlers': {
-        'file': {
+        'file_errores': {
             'level': 'WARNING',
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'unidossis.log',
+            'filename': _LOG_DIR / 'errores.log',
             'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+        'file_rendimiento': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': _LOG_DIR / 'rendimiento.log',
+            'formatter': 'rendimiento',
+            'encoding': 'utf-8',
         },
         'console': {
             'level': 'INFO',
@@ -200,18 +217,23 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['file', 'console'],
+            'handlers': ['file_errores', 'console'],
             'level': 'WARNING',
             'propagate': True,
         },
         'unidossis': {
-            'handlers': ['file', 'console'],
+            'handlers': ['file_errores', 'console'],
             'level': 'INFO',
             'propagate': False,
         },
-        'unidossis.notificaciones': {
-            'handlers': ['file', 'console'],
-            'level': 'INFO',
+        'unidossis.rendimiento': {
+            'handlers': ['file_rendimiento'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'unidossis.errores': {
+            'handlers': ['file_errores', 'console'],
+            'level': 'ERROR',
             'propagate': False,
         },
     },

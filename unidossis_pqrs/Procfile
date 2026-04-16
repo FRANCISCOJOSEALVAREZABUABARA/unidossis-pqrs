@@ -1,3 +1,0 @@
-# Procfile — Le dice a Railway cómo arrancar la aplicación
-# gunicorn = el servidor web profesional para producción (no el de desarrollo)
-web: gunicorn unidossis_pqrs.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
