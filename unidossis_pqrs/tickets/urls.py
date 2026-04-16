@@ -39,4 +39,9 @@ urlpatterns = [
     path('api/ticket/<str:ticket_id>/comentario/', views.api_agregar_comentario, name='api_agregar_comentario'),
     path('api/ticket/<str:ticket_id>/reclasificar/', views.api_reclasificar_ia, name='api_reclasificar_ia'),
     path('api/ticket/<str:ticket_id>/aplicar-reclasificacion/', views.api_aplicar_reclasificacion, name='api_aplicar_reclasificacion'),
+
+    # ─── Monitoreo del Sistema ───────────────────────────────
+    path('monitoreo/', views.monitoreo_view, name='monitoreo'),
+    path('monitoreo/descargar/<str:tipo>/', views.descargar_log_view, name='descargar_log'),
+    path('monitoreo/respaldo-db/', views.descargar_respaldo_db_view, name='descargar_respaldo_db'),
 ]

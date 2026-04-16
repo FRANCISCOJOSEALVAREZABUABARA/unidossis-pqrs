@@ -1,0 +1,174 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    .monitor-header {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 28px; flex-wrap: wrap; gap: 16px;
+    }
+    .monitor-header h1 { font-size: 22px; font-weight: 700; color: var(--text-dark); margin: 0; }
+    .monitor-header h1 i { color: #6366f1; margin-right: 8px; }
+    .monitor-tabs { display: flex; gap: 8px; }
+    .monitor-tab {
+        padding: 8px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+        cursor: pointer; border: 1.5px solid var(--border-light); background: white;
+        color: var(--text-muted); transition: all 0.2s;
+    }
+    .monitor-tab:hover { border-color: #6366f1; color: #6366f1; }
+    .monitor-tab.active { background: #6366f1; color: white; border-color: #6366f1; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+        background: white; border-radius: 16px; padding: 20px; text-align: center;
+        border: 1px solid var(--border-light); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .stat-card .stat-icon { font-size: 22px; margin-bottom: 8px; }
+    .stat-card .stat-value { font-size: 28px; font-weight: 800; color: var(--text-dark); }
+    .stat-card .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+    .log-container {
+        background: #1e1e2e; border-radius: 16px; padding: 20px; margin-bottom: 24px;
+        max-height: 500px; overflow-y: auto; font-family: 'Courier New', monospace;
+        font-size: 12.5px; line-height: 1.8; color: #cdd6f4;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+    .log-container::-webkit-scrollbar { width: 8px; }
+    .log-container::-webkit-scrollbar-thumb { background: #45475a; border-radius: 4px; }
+    .log-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .log-line.error { color: #f38ba8; }
+    .log-line.warning { color: #fab387; }
+    .log-line.slow { color: #f9e2af; }
+    .log-line.ok { color: #a6e3a1; }
+    .log-line.info { color: #89b4fa; }
+
+    .log-empty {
+        text-align: center; padding: 60px 20px; color: #6c7086;
+    }
+    .log-empty i { font-size: 40px; margin-bottom: 12px; display: block; }
+
+    .refresh-btn {
+        padding: 8px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+        cursor: pointer; border: none; background: #6366f1; color: white;
+        transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+    }
+    .refresh-btn:hover { background: #4f46e5; transform: translateY(-1px); }
+
+    .download-bar {
+        display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap;
+        padding: 16px 20px; background: white; border-radius: 14px;
+        border: 1px solid var(--border-light); box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .download-btn {
+        padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+        cursor: pointer; border: 1.5px solid var(--border-light); background: white;
+        color: var(--text-dark); transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+        text-decoration: none;
+    }
+    .download-btn:hover { border-color: #6366f1; color: #6366f1; background: #f5f3ff; }
+    .download-btn.primary { background: #059669; color: white; border-color: #059669; }
+    .download-btn.primary:hover { background: #047857; }
+    .download-btn i { font-size: 14px; }
+</style>
+
+<div class="monitor-header">
+    <h1><i class="fa-solid fa-chart-area"></i> Monitor del Sistema</h1>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <div class="monitor-tabs">
+            <div class="monitor-tab active" onclick="showTab('rendimiento')">⏱️ Rendimiento</div>
+            <div class="monitor-tab" onclick="showTab('errores')">❌ Errores</div>
+        </div>
+        <button class="refresh-btn" onclick="location.reload()">
+            <i class="fa-solid fa-arrows-rotate"></i> Actualizar
+        </button>
+    </div>
+</div>
+
+<!-- Descargas -->
+<div class="download-bar">
+    <span style="font-weight: 600; color: var(--text-muted); font-size: 13px; display: flex; align-items: center; gap: 6px; margin-right: 8px;">
+        <i class="fa-solid fa-download"></i> Descargar:
+    </span>
+    <a href="{% url 'descargar_log' 'rendimiento' %}" class="download-btn">
+        <i class="fa-solid fa-gauge-high"></i> Log Rendimiento
+    </a>
+    <a href="{% url 'descargar_log' 'errores' %}" class="download-btn">
+        <i class="fa-solid fa-bug"></i> Log Errores
+    </a>
+    <a href="{% url 'descargar_respaldo_db' %}" class="download-btn primary">
+        <i class="fa-solid fa-database"></i> Respaldo Base de Datos
+    </a>
+</div>
+
+<!-- Estadísticas -->
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value">{{ total_peticiones }}</div>
+        <div class="stat-label">Peticiones registradas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-value" style="color: {{ 'var(--danger)' if peticiones_lentas > 0 else 'var(--success)' }}">{{ peticiones_lentas }}</div>
+        <div class="stat-label">Peticiones lentas (&gt;2s)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">❌</div>
+        <div class="stat-value" style="color: {{ 'var(--danger)' if total_errores > 0 else 'var(--success)' }}">{{ total_errores }}</div>
+        <div class="stat-label">Errores detectados</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">💾</div>
+        <div class="stat-value">{{ tamano_db }}</div>
+        <div class="stat-label">Base de datos</div>
+    </div>
+</div>
+
+<!-- Log de Rendimiento -->
+<div id="tab-rendimiento">
+    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-dark);">
+        <i class="fa-solid fa-gauge-high" style="color: #6366f1;"></i> Últimas peticiones
+    </h3>
+    <div class="log-container">
+        {% if log_rendimiento %}
+            {% for linea in log_rendimiento %}
+                <div class="log-line {% if 'LENTO' in linea %}slow{% elif 'ERROR' in linea %}error{% elif '⚡' in linea %}info{% else %}ok{% endif %}">{{ linea }}</div>
+            {% endfor %}
+        {% else %}
+            <div class="log-empty">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                Aún no hay registros de rendimiento.<br>
+                Se llenarán cuando los usuarios naveguen la app.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Log de Errores -->
+<div id="tab-errores" style="display:none;">
+    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-dark);">
+        <i class="fa-solid fa-bug" style="color: var(--danger);"></i> Errores recientes
+    </h3>
+    <div class="log-container">
+        {% if log_errores %}
+            {% for linea in log_errores %}
+                <div class="log-line {% if 'ERROR' in linea or 'EXCEPCIÓN' in linea %}error{% elif 'WARNING' in linea %}warning{% else %}info{% endif %}">{{ linea }}</div>
+            {% endfor %}
+        {% else %}
+            <div class="log-empty">
+                <i class="fa-solid fa-circle-check" style="color: #a6e3a1;"></i>
+                ¡Sin errores! El sistema funciona correctamente.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function showTab(tab) {
+    document.getElementById('tab-rendimiento').style.display = tab === 'rendimiento' ? 'block' : 'none';
+    document.getElementById('tab-errores').style.display = tab === 'errores' ? 'block' : 'none';
+    document.querySelectorAll('.monitor-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+}
+</script>
+{% endblock %}

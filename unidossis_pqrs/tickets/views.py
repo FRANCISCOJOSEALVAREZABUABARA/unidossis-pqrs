@@ -1464,3 +1464,106 @@ def encuesta_csat_view(request, token):
         })
 
     return render(request, 'tickets/encuesta_csat.html', {'encuesta': encuesta})
+
+
+# ─────────────────────────────────────────────────────────────
+# MONITOREO DEL SISTEMA
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+@rol_requerido('superadmin')
+def monitoreo_view(request):
+    """Panel de monitoreo: muestra logs de rendimiento y errores del sistema."""
+    import os
+    from pathlib import Path
+
+    log_dir = Path(__file__).resolve().parent.parent / 'logs'
+
+    def leer_ultimas_lineas(archivo, n=100):
+        """Lee las últimas N líneas de un archivo de log."""
+        ruta = log_dir / archivo
+        if not ruta.exists():
+            return []
+        try:
+            with open(ruta, 'r', encoding='utf-8', errors='replace') as f:
+                lineas = f.readlines()
+            return [l.strip() for l in lineas[-n:] if l.strip()][::-1]  # Más reciente primero
+        except Exception:
+            return []
+
+    log_rendimiento = leer_ultimas_lineas('rendimiento.log', 150)
+    log_errores = leer_ultimas_lineas('errores.log', 100)
+
+    # Estadísticas
+    total_peticiones = len(log_rendimiento)
+    peticiones_lentas = sum(1 for l in log_rendimiento if 'LENTO' in l)
+    total_errores = len(log_errores)
+
+    # Tamaño de la base de datos
+    db_path = Path(__file__).resolve().parent.parent / 'db.sqlite3'
+    if db_path.exists():
+        tamano_bytes = db_path.stat().st_size
+        if tamano_bytes > 1024 * 1024:
+            tamano_db = f'{tamano_bytes / (1024*1024):.1f} MB'
+        else:
+            tamano_db = f'{tamano_bytes / 1024:.0f} KB'
+    else:
+        tamano_db = 'N/A'
+
+    return render(request, 'tickets/monitoreo.html', {
+        'log_rendimiento': log_rendimiento,
+        'log_errores': log_errores,
+        'total_peticiones': total_peticiones,
+        'peticiones_lentas': peticiones_lentas,
+        'total_errores': total_errores,
+        'tamano_db': tamano_db,
+        'perfil': request.user.perfil,
+        'nav_active': 'monitoreo',
+    })
+
+
+@login_required
+@rol_requerido('superadmin')
+def descargar_log_view(request, tipo):
+    """Descarga un archivo de log específico."""
+    from pathlib import Path
+
+    log_dir = Path(__file__).resolve().parent.parent / 'logs'
+    archivos_permitidos = {
+        'rendimiento': 'rendimiento.log',
+        'errores': 'errores.log',
+    }
+
+    if tipo not in archivos_permitidos:
+        return HttpResponse('Archivo no válido.', status=400)
+
+    ruta = log_dir / archivos_permitidos[tipo]
+    if not ruta.exists():
+        return HttpResponse(f'El archivo {archivos_permitidos[tipo]} aún no tiene registros.', status=404)
+
+    with open(ruta, 'r', encoding='utf-8', errors='replace') as f:
+        contenido = f.read()
+
+    fecha = timezone.now().strftime('%Y-%m-%d_%H%M')
+    response = HttpResponse(contenido, content_type='text/plain; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="unidossis_{tipo}_{fecha}.log"'
+    return response
+
+
+@login_required
+@rol_requerido('superadmin')
+def descargar_respaldo_db_view(request):
+    """Descarga un respaldo completo de la base de datos SQLite."""
+    from pathlib import Path
+
+    db_path = Path(__file__).resolve().parent.parent / 'db.sqlite3'
+    if not db_path.exists():
+        return HttpResponse('Base de datos no encontrada.', status=404)
+
+    fecha = timezone.now().strftime('%Y-%m-%d_%H%M')
+    with open(db_path, 'rb') as f:
+        response = HttpResponse(f.read(), content_type='application/x-sqlite3')
+        response['Content-Disposition'] = f'attachment; filename="unidossis_respaldo_{fecha}.sqlite3"'
+    return response
+
+
