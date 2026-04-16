@@ -109,12 +109,12 @@
     </div>
     <div class="stat-card">
         <div class="stat-icon">⚠️</div>
-        <div class="stat-value" style="color: {{ 'var(--danger)' if peticiones_lentas > 0 else 'var(--success)' }}">{{ peticiones_lentas }}</div>
+        <div class="stat-value" style="color: {% if peticiones_lentas > 0 %}var(--danger){% else %}var(--success){% endif %}">{{ peticiones_lentas }}</div>
         <div class="stat-label">Peticiones lentas (&gt;2s)</div>
     </div>
     <div class="stat-card">
         <div class="stat-icon">❌</div>
-        <div class="stat-value" style="color: {{ 'var(--danger)' if total_errores > 0 else 'var(--success)' }}">{{ total_errores }}</div>
+        <div class="stat-value" style="color: {% if total_errores > 0 %}var(--danger){% else %}var(--success){% endif %}">{{ total_errores }}</div>
         <div class="stat-label">Errores detectados</div>
     </div>
     <div class="stat-card">

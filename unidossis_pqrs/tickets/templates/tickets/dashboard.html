@@ -59,9 +59,16 @@
 
 {% block content %}
     <!-- Greeting -->
-    <div class="greeting">
-        <h1>Buenos días, <span>{{ request.user.first_name|default:request.user.username }}</span> 👋</h1>
-        <p>{{ perfil.get_rol_display }} — Panel de control PQRS en tiempo real</p>
+    <div class="greeting" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+            <h1>Buenos días, <span>{{ request.user.first_name|default:request.user.username }}</span> 👋</h1>
+            <p>{{ perfil.get_rol_display }} — Panel de control PQRS en tiempo real</p>
+        </div>
+        {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' %}
+        <button onclick="document.getElementById('modal-crear-pqrs').classList.add('visible')" style="background:var(--accent); color:white; padding:12px 22px; border-radius:12px; border:none; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(59,130,246,0.3); transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+            <i class="fa-solid fa-plus-circle"></i> Radicar PQRS Manual
+        </button>
+        {% endif %}
     </div>
 
     <!-- ═══════ BENTO ANALYTICS GRID ═══════ -->
@@ -594,4 +601,261 @@
         }
     });
 </script>
+
+{% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' %}
+<!-- ═══════ MODAL: CREAR PQRS MANUAL ═══════ -->
+<div class="modal-overlay" id="modal-crear-pqrs">
+    <div class="modal" style="max-width:720px; border-radius:24px; max-height:90vh; overflow-y:auto;">
+        <div class="modal-header" style="padding:25px 30px 15px; position:sticky; top:0; background:white; z-index:10; border-radius:24px 24px 0 0;">
+            <h3 style="margin:0; font-size:17px; display:flex; align-items:center; gap:10px;">
+                <span style="width:36px; height:36px; background:#EFF6FF; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fa-solid fa-file-circle-plus" style="color:#1e40af; font-size:15px;"></i>
+                </span>
+                Radicar PQRS Manual
+            </h3>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-crear-pqrs').classList.remove('visible')" style="width:32px; height:32px; padding:0; border-radius:50%;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form action="{% url 'crear_pqrs_manual' %}" method="POST" enctype="multipart/form-data" style="padding:0 30px 25px;">
+            {% csrf_token %}
+
+            <!-- Medio de recepción -->
+            <div style="margin-bottom:18px;">
+                <label style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:block;">📞 Medio de Recepción</label>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <label style="display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; border:1.5px solid var(--border); cursor:pointer; font-size:12.5px; font-weight:600;">
+                        <input type="radio" name="medio_recepcion" value="telefono" checked> 📞 Teléfono
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; border:1.5px solid var(--border); cursor:pointer; font-size:12.5px; font-weight:600;">
+                        <input type="radio" name="medio_recepcion" value="presencial"> 🏢 Presencial
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; border:1.5px solid var(--border); cursor:pointer; font-size:12.5px; font-weight:600;">
+                        <input type="radio" name="medio_recepcion" value="correo"> ✉️ Correo
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; border:1.5px solid var(--border); cursor:pointer; font-size:12.5px; font-weight:600;">
+                        <input type="radio" name="medio_recepcion" value="whatsapp"> 💬 WhatsApp
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; border:1.5px solid var(--border); cursor:pointer; font-size:12.5px; font-weight:600;">
+                        <input type="radio" name="medio_recepcion" value="otro"> 📋 Otro
+                    </label>
+                </div>
+            </div>
+
+            <hr style="border:none; border-top:1px solid var(--border); margin:16px 0;">
+
+            <!-- Sección: Solicitante -->
+            <p style="font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;"><i class="fa-solid fa-id-card"></i> Datos del Solicitante</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;">
+                <div style="grid-column:span 2; position:relative;">
+                    <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;">Institución / Entidad *</label>
+                    <div style="position:relative;">
+                        <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none;">🏥</span>
+                        <input type="text" name="institucion" id="modal-input-cliente" autocomplete="off"
+                            placeholder="Escriba 3 letras para buscar o ingresar nueva..."
+                            required
+                            style="width:100%; padding:10px 14px 10px 38px; border-radius:10px; border:1.5px solid var(--border); font-size:13px; font-weight:500; box-sizing:border-box; transition:border-color 0.2s;"
+                            onfocus="this.style.borderColor='var(--accent)'"
+                            onblur="setTimeout(()=>{document.getElementById('ac-dropdown-cliente').style.display='none'},200); this.style.borderColor='var(--border)'">
+                        <div id="ac-nw-badge" style="display:none; position:absolute; right:12px; top:50%; transform:translateY(-50%); background:#FEF3C7; color:#92400E; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; letter-spacing:0.3px;">✨ NUEVO</div>
+                    </div>
+                    <!-- Dropdown Premium -->
+                    <div id="ac-dropdown-cliente" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; background:white; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(59,130,246,0.1); border:1.5px solid rgba(59,130,246,0.15); z-index:9999; overflow:hidden; max-height:260px; overflow-y:auto;">
+                        <div id="ac-list-cliente"></div>
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;">Nombre del Solicitante *</label>
+                    <input type="text" name="nombre" placeholder="Nombre completo" required style="width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); font-size:13px; font-weight:500;">
+                </div>
+                <div>
+                    <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;">Correo Electrónico *</label>
+                    <input type="email" name="email" placeholder="correo@ejemplo.com" required style="width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); font-size:13px; font-weight:500;">
+                </div>
+                <div style="position:relative;">
+                    <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;">Ciudad</label>
+                    <div style="position:relative;">
+                        <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:14px; pointer-events:none;">📍</span>
+                        <input type="text" name="ciudad" id="modal-input-ciudad" autocomplete="off"
+                            placeholder="Buscar ciudad..."
+                            style="width:100%; padding:10px 14px 10px 34px; border-radius:10px; border:1.5px solid var(--border); font-size:13px; font-weight:500; box-sizing:border-box; transition:border-color 0.2s;"
+                            onfocus="this.style.borderColor='var(--accent)'"
+                            onblur="setTimeout(()=>{document.getElementById('ac-dropdown-ciudad').style.display='none'},200); this.style.borderColor='var(--border)'">
+                    </div>
+                    <div id="ac-dropdown-ciudad" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; background:white; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,0.15); border:1.5px solid rgba(59,130,246,0.15); z-index:9999; overflow:hidden; max-height:200px; overflow-y:auto;">
+                        <div id="ac-list-ciudad"></div>
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;">Teléfono</label>
+                    <input type="tel" name="telefono" placeholder="3001234567" style="width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); font-size:13px; font-weight:500;">
+                </div>
+                <div>
+                    <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;">Cargo</label>
+                    <input type="text" name="cargo" placeholder="Cargo del solicitante" style="width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); font-size:13px; font-weight:500;">
+                </div>
+            </div>
+
+            <hr style="border:none; border-top:1px solid var(--border); margin:16px 0;">
+
+            <!-- Sección: PQRS -->
+            <p style="font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:14px;"><i class="fa-solid fa-file-medical"></i> Detalles de la PQRS</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px;">
+                <div>
+                    <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;">Tipo de Solicitud *</label>
+                    <select name="tipo_solicitud" required style="width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); font-size:13px; font-weight:500; background:white;">
+                        {% for key, value in TIPO_CHOICES %}
+                            <option value="{{ key }}">{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;">Regional</label>
+                    <select name="regional" style="width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); font-size:13px; font-weight:500; background:white;">
+                        <option value="">Asignar automáticamente (IA)</option>
+                        {% for key, value in REGIONAL_CHOICES %}
+                            <option value="{{ key }}">{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="grid-column:span 2;">
+                    <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;">Asunto *</label>
+                    <input type="text" name="asunto" placeholder="Motivo de la PQRS" required style="width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); font-size:13px; font-weight:500;">
+                </div>
+                <div style="grid-column:span 2;">
+                    <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:4px; display:block;">Descripción y Detalle *</label>
+                    <textarea name="descripcion" rows="4" placeholder="Describa la situación: hechos, producto, lote, etc." required style="width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); font-size:13px; font-weight:500; resize:vertical;"></textarea>
+                </div>
+            </div>
+
+            <!-- Archivos -->
+            <div style="margin-bottom:20px;">
+                <label style="font-size:11.5px; font-weight:600; color:var(--text-muted); margin-bottom:6px; display:block;"><i class="fa-solid fa-paperclip"></i> Adjuntar Evidencia (Opcional)</label>
+                <input type="file" name="adjuntos" multiple style="font-size:12px;">
+            </div>
+
+            <!-- Submit -->
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('modal-crear-pqrs').classList.remove('visible')" class="btn btn-outline" style="padding:10px 20px; border-radius:10px;">Cancelar</button>
+                <button type="submit" style="background:var(--accent); color:white; padding:10px 24px; border-radius:10px; border:none; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
+                    <i class="fa-solid fa-paper-plane"></i> Radicar PQRS
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// ═══════ AUTOCOMPLETE PREMIUM ═══════
+const regionalNames = {
+    'liquidos': 'Cundinamarca Liq.', 'solidos': 'Sólidos', 'marly': 'Marly',
+    'occidente': 'Occidente', 'antioquia': 'Antioquia', 'costa': 'Costa',
+    'llanos': 'Llanos', 'eje_cafetero': 'Eje Cafetero'
+};
+const regionalColors = {
+    'liquidos':'#3B82F6','solidos':'#8B5CF6','marly':'#EC4899',
+    'occidente':'#F59E0B','antioquia':'#10B981','costa':'#06B6D4',
+    'llanos':'#F97316','eje_cafetero':'#6366F1'
+};
+
+function setupPremiumAC(inputId, dropdownId, listId, apiUrl, minChars, onSelect) {
+    const input = document.getElementById(inputId);
+    const dropdown = document.getElementById(dropdownId);
+    const list = document.getElementById(listId);
+    if (!input || !dropdown || !list) return;
+
+    let fetchTimer;
+    input.addEventListener('input', function() {
+        clearTimeout(fetchTimer);
+        const q = this.value.trim();
+        if (q.length < minChars) { dropdown.style.display = 'none'; return; }
+        fetchTimer = setTimeout(() => {
+            fetch(`${apiUrl}?q=${encodeURIComponent(q)}`)
+                .then(r => r.json())
+                .then(data => {
+                    list.innerHTML = '';
+                    if (!data.results || data.results.length === 0) {
+                        dropdown.style.display = 'none';
+                        return;
+                    }
+                    data.results.forEach((item, i) => {
+                        const div = document.createElement('div');
+                        const reg = item.regional || '';
+                        const regColor = regionalColors[reg] || '#6B7280';
+                        const regName = regionalNames[reg] || '';
+                        div.style.cssText = `padding:10px 16px; cursor:pointer; display:flex; align-items:center; gap:12px; border-bottom:1px solid #F1F5F9; transition:background 0.15s;`;
+                        div.innerHTML = `
+                            <span style="width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,${regColor}22,${regColor}11); border:1.5px solid ${regColor}44; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:15px;">🏥</span>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:12.5px; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.nombre}</div>
+                                ${item.ciudad ? `<div style="font-size:11px; color:#64748B; margin-top:1px;">📍 ${item.ciudad}</div>` : ''}
+                            </div>
+                            ${regName ? `<span style="background:${regColor}18; color:${regColor}; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; border:1px solid ${regColor}30;">${regName}</span>` : ''}
+                        `;
+                        div.addEventListener('mouseenter', () => div.style.background = '#F8FAFF');
+                        div.addEventListener('mouseleave', () => div.style.background = 'white');
+                        div.addEventListener('mousedown', (e) => {
+                            e.preventDefault();
+                            input.value = item.nombre;
+                            dropdown.style.display = 'none';
+                            if (onSelect) onSelect(item);
+                        });
+                        list.appendChild(div);
+                    });
+                    dropdown.style.display = 'block';
+                    dropdown.style.animation = 'acFadeIn 0.15s ease';
+                }).catch(() => { dropdown.style.display = 'none'; });
+        }, 200);
+    });
+
+    // Detectar si se pone un nombre nuevo (no encontrado)
+    if (inputId === 'modal-input-cliente') {
+        input.addEventListener('blur', function() {
+            const badge = document.getElementById('ac-nw-badge');
+            if (badge) badge.style.display = this.value.trim() && list.innerHTML === '' ? 'block' : 'none';
+        });
+    }
+}
+
+// Autocomplete simple para ciudades (texto plano)
+function setupSimpleAC(inputId, dropdownId, listId, apiUrl) {
+    const input = document.getElementById(inputId);
+    const dropdown = document.getElementById(dropdownId);
+    const list = document.getElementById(listId);
+    if (!input || !dropdown || !list) return;
+    let timer;
+    input.addEventListener('input', function() {
+        clearTimeout(timer);
+        if (this.value.length < 3) { dropdown.style.display = 'none'; return; }
+        timer = setTimeout(() => {
+            fetch(`${apiUrl}?q=${encodeURIComponent(this.value)}`)
+                .then(r => r.json())
+                .then(data => {
+                    list.innerHTML = '';
+                    if (!data.results || data.results.length === 0) { dropdown.style.display = 'none'; return; }
+                    data.results.forEach(item => {
+                        const div = document.createElement('div');
+                        div.style.cssText = 'padding:9px 16px; cursor:pointer; display:flex; align-items:center; gap:10px; border-bottom:1px solid #F1F5F9; font-size:12.5px; font-weight:600; color:#1e293b; transition:background 0.15s;';
+                        div.innerHTML = `<span style="font-size:14px;">📍</span> ${item.nombre}`;
+                        div.addEventListener('mouseenter', () => div.style.background = '#F8FAFF');
+                        div.addEventListener('mouseleave', () => div.style.background = 'white');
+                        div.addEventListener('mousedown', (e) => { e.preventDefault(); input.value = item.nombre; dropdown.style.display = 'none'; });
+                        list.appendChild(div);
+                    });
+                    dropdown.style.display = 'block';
+                }).catch(() => { dropdown.style.display = 'none'; });
+        }, 200);
+    });
+}
+
+setupPremiumAC('modal-input-cliente', 'ac-dropdown-cliente', 'ac-list-cliente', '/api/buscar-clientes/', 3);
+setupSimpleAC('modal-input-ciudad', 'ac-dropdown-ciudad', 'ac-list-ciudad', '/api/buscar-ciudades/');
+
+const styleAC = document.createElement('style');
+styleAC.textContent = `@keyframes acFadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } } #ac-dropdown-cliente::-webkit-scrollbar, #ac-dropdown-ciudad::-webkit-scrollbar { width:4px; } #ac-dropdown-cliente::-webkit-scrollbar-thumb, #ac-dropdown-ciudad::-webkit-scrollbar-thumb { background:#CBD5E1; border-radius:4px; }`;
+document.head.appendChild(styleAC);
+</script>
+{% endif %}
+
 {% endblock %}

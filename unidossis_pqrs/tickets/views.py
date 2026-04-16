@@ -312,6 +312,9 @@ def dashboard_view(request):
         'nav_active': 'dashboard',
         'clientes_disponibles': clientes_disponibles,
         'cliente_id_selected': cliente_id,
+        # Choices para modal de creación manual
+        'TIPO_CHOICES': Ticket.TIPO_SOLICITUD_CHOICES,
+        'REGIONAL_CHOICES': Ticket.REGIONAL_CHOICES,
     }
     return render(request, 'tickets/dashboard.html', context)
 
@@ -920,9 +923,15 @@ def api_buscar_clientes(request):
     query = request.GET.get('q', '').strip()
     if len(query) < 3:
         return JsonResponse({'results': []})
-    resultados = Cliente.objects.filter(nombre__icontains=query)[:15]
-    data = [{'nombre': c.nombre} for c in resultados]
+    resultados = Cliente.objects.filter(nombre__icontains=query, activo=True).select_related('ciudad')[:15]
+    data = [{
+        'nombre': c.nombre,
+        'regional': c.regional or '',
+        'ciudad': c.ciudad.nombre if c.ciudad else '',
+        'email': c.email_principal or '',
+    } for c in resultados]
     return JsonResponse({'results': data})
+
 
 
 @login_required
@@ -1567,3 +1576,85 @@ def descargar_respaldo_db_view(request):
     return response
 
 
+# ─────────────────────────────────────────────────────────────
+# CREAR PQRS MANUAL (desde el dashboard)
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+@rol_requerido('superadmin', 'admin_pqrs')
+def crear_pqrs_manual_view(request):
+    """Permite a superadmin y admin_pqrs crear una PQRS manualmente
+    para casos recibidos por teléfono, presencial, etc."""
+    if request.method != 'POST':
+        return redirect('dashboard')
+
+    institucion = request.POST.get('institucion', '')
+    ciudad = request.POST.get('ciudad', '')
+    nombre = request.POST.get('nombre', '')
+    cargo = request.POST.get('cargo', '')
+    telefono = request.POST.get('telefono', '')
+    email = request.POST.get('email', '')
+    tipo = request.POST.get('tipo_solicitud', 'queja')
+    regional = request.POST.get('regional', '')
+    asunto = request.POST.get('asunto', '')
+    descripcion = request.POST.get('descripcion', '')
+    medio_recepcion = request.POST.get('medio_recepcion', 'manual')
+
+    if not (institucion and nombre and email and asunto and descripcion):
+        from django.contrib import messages
+        messages.error(request, 'Complete todos los campos obligatorios.')
+        return redirect('dashboard')
+
+    # Buscar cliente existente
+    cliente_rel = Cliente.objects.filter(nombre__iexact=institucion).first()
+
+    # Procesamiento por IA
+    analisis = analizar_ticket_con_ia(asunto, descripcion)
+    regional_asignada = regional if regional else (cliente_rel.regional if cliente_rel else analisis.get('regional', 'liquidos'))
+
+    # Autocrear cliente si no existe
+    if not cliente_rel:
+        ciudad_obj = Ciudad.objects.filter(nombre__iexact=ciudad).first() if ciudad else None
+        cliente_rel = Cliente.objects.create(
+            nombre=institucion,
+            regional=regional_asignada,
+            ciudad=ciudad_obj,
+            email_principal=email,
+            activo=True
+        )
+
+    nuevo_ticket = Ticket.objects.create(
+        cliente_rel=cliente_rel,
+        entidad_cliente=institucion,
+        institucion=institucion,
+        ciudad=ciudad,
+        remitente_nombre=nombre,
+        solicitante_cargo=cargo,
+        telefono=telefono,
+        remitente_email=email,
+        tipo_solicitud=tipo,
+        asunto=asunto,
+        cuerpo=descripcion,
+        regional=regional_asignada,
+        proceso=analisis['proceso'],
+        linea_servicio=analisis['linea'],
+        tipificacion=analisis['tipificacion'],
+        criticidad=analisis['criticidad'],
+        analisis_ia=analisis['analisis_ia'],
+        clasificado_por_ia=True
+    )
+
+    # Archivos adjuntos
+    if request.FILES.getlist('adjuntos'):
+        for f in request.FILES.getlist('adjuntos'):
+            ArchivoAdjunto.objects.create(ticket=nuevo_ticket, archivo=f)
+
+    # Log de actividad
+    LogActividad.objects.create(
+        ticket=nuevo_ticket, usuario=request.user,
+        accion=f'PQRS creada manualmente ({medio_recepcion})',
+        detalle=f'Creado por {request.user.get_full_name() or request.user.username} | '
+                f'Medio: {medio_recepcion} | IA: {analisis["tipificacion"]} / {analisis["criticidad"]}'
+    )
+
+    return redirect('ticket_detail', ticket_id=nuevo_ticket.ticket_id)

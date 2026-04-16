@@ -143,30 +143,33 @@ img { max-width: 100%; height: auto; }
     width: auto;
 }
 
-/* Sidebar Toggle */
+/* Sidebar Toggle — Botón flotante premium fuera del sidebar */
 .sidebar-toggle {
-    position: absolute;
-    top: 32px;
-    right: -13px;
-    width: 26px;
-    height: 26px;
-    background: var(--accent);
-    color: white;
+    position: fixed;
+    top: 38px;
+    left: calc(var(--sidebar-width) - 16px);
+    width: 32px;
+    height: 32px;
+    background: white;
+    color: var(--accent);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 11px;
     cursor: pointer;
-    border: 3px solid var(--bg);
-    z-index: 210;
-    transition: all 0.3s;
-    box-shadow: 0 2px 8px rgba(59,130,246,0.4);
+    border: 2px solid var(--accent-border);
+    z-index: 300;
+    transition: left 0.3s ease, transform 0.3s ease, box-shadow 0.2s, background 0.2s;
+    box-shadow: 0 2px 12px rgba(59,130,246,0.25), 0 1px 4px rgba(0,0,0,0.08);
 }
 
 .sidebar-toggle:hover {
-    background: var(--accent-hover);
-    transform: scale(1.1);
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    box-shadow: 0 4px 16px rgba(59,130,246,0.4);
+    transform: scale(1.08);
 }
 
 /* Navigation */
@@ -328,11 +331,14 @@ img { max-width: 100%; height: auto; }
 }
 
 .sidebar.collapsed .sidebar-toggle {
+    left: calc(var(--sidebar-collapsed) - 16px);
     transform: rotate(180deg);
 }
 
 .sidebar.collapsed .sidebar-toggle:hover {
-    transform: rotate(180deg) scale(1.1);
+    transform: rotate(180deg) scale(1.08);
+    background: var(--accent);
+    color: white;
 }
 
 /* ── 5. HEADER / TOP BAR ─────────────────────────────────── */

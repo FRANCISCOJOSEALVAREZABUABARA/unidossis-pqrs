@@ -53,6 +53,10 @@
                 <i class="fa-solid fa-screwdriver-wrench"></i>
                 <span>Admin Django</span>
             </a>
+            <a href="{% url 'monitoreo' %}" class="nav-item {% if nav_active == 'monitoreo' %}active{% endif %}">
+                <i class="fa-solid fa-chart-area"></i>
+                <span>Monitor del Sistema</span>
+            </a>
             {% endif %}
         </div>
 

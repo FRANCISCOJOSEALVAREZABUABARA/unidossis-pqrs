@@ -10,6 +10,7 @@ urlpatterns = [
 
     # ─── Dashboard y Tickets ─────────────────────────────────
     path('dashboard/', views.dashboard_view, name='dashboard'),
+    path('dashboard/crear-pqrs/', views.crear_pqrs_manual_view, name='crear_pqrs_manual'),
     path('ticket/<str:ticket_id>/', views.ticket_detail_view, name='ticket_detail'),
 
     # ─── Gestión de Clientes ─────────────────────────────────
