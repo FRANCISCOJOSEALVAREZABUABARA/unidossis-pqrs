@@ -168,46 +168,34 @@ jobs:
           # Verificar si requirements.txt cambió en este push
           git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "requirements.txt" && \
           echo "requirements.txt cambió — instalando dependencias..." && \
-          CONSOLE_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
-            -d "executable=bash&arguments=&working_directory=/home/Unidossis" \
-            "https://www.pythonanywhere.com/api/v0/user/Unidossis/consoles/") && \
-          CID=$(echo $CONSOLE_RESPONSE | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])") && \
-          sleep 5 && \
-          PIP_CMD="source ~/.virtualenvs/unidossis/bin/activate && pip install -r ~/unidossis-pqrs/unidossis_pqrs/requirements.txt --quiet && echo 'PIP DONE'" && \
-          curl -s -X POST \
-            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
-            --data-urlencode "input=${PIP_CMD}
-          " \
-            "https://www.pythonanywhere.com/api/v0/user/Unidossis/consoles/$CID/send_input/" && \
-          sleep 30 && \
-          curl -s -X DELETE \
-            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
-            "https://www.pythonanywhere.com/api/v0/user/Unidossis/consoles/$CID/" > /dev/null && \
-          echo "✅ Dependencias instaladas" || \
-          echo "ℹ️ requirements.txt no cambió — sin instalación necesaria"
+          echo "=== Git pull ejecutado ==="
         continue-on-error: true
 
-      # ── Paso 3: Recargar la webapp ──
-      # Este es el equivalente a hacer clic en "Reload" en el panel de PythonAnywhere.
-      # Reinicia el servidor WSGI para que tome los nuevos cambios.
+      # ── Paso 2: Recargar la webapp (endpoint estable) ──
       - name: 🔃 Recargar webapp
         run: |
-          echo "=== Recargando webapp de PythonAnywhere ==="
-          RESULT=$(curl -s -X POST \
+          echo "=== Recargando webapp ==="
+          HTTP=$(curl -s -o /tmp/reload_response.txt -w "%{http_code}" -X POST \
             -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
             "https://www.pythonanywhere.com/api/v0/user/Unidossis/webapps/unidossis.pythonanywhere.com/reload/")
-          echo "Respuesta: $RESULT"
-          echo "✅ Webapp recargada"
 
-      # ── Paso 4: Health check ──
-      # Verifica que la página de producción responde correctamente después del deploy.
-      - name: 🏥 Health check post-deploy
+          echo "HTTP Status: $HTTP"
+          cat /tmp/reload_response.txt
+
+          if [ "$HTTP" = "200" ]; then
+            echo "Webapp recargada exitosamente"
+          else
+            echo "Advertencia: respuesta inesperada del reload ($HTTP)"
+            exit 1
+          fi
+
+      # ── Paso 3: Health check post-deploy ──
+      - name: 🏥 Health check
         run: |
-          echo "=== Verificando que producción responde ==="
-          sleep 10  # Dar tiempo a que el servidor reinicie
+          echo "=== Verificando produccion ==="
+          sleep 12
 
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
             "https://unidossis.pythonanywhere.com/login/" \
             --max-time 30)
 
