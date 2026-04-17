@@ -14,7 +14,8 @@ import json
 from .models import (
     Ticket, ArchivoAdjunto, Cliente, Ciudad, Cargo, MaestroInstitucion,
     PerfilUsuario, ConfiguracionSLA, AlertaSLA, LogActividad,
-    ComentarioTicket, EncuestaSatisfaccion, FeedbackIA, IntentoLogin
+    ComentarioTicket, EncuestaSatisfaccion, FeedbackIA, IntentoLogin,
+    SolicitudResetPassword
 )
 from .ia_engine import analizar_ticket_con_ia, conversar_con_analista_ia, reclasificar_ticket_con_ia, generar_resumen_cliente
 
@@ -644,6 +645,191 @@ def logout_view(request):
         )
     logout(request)
     return redirect('login')
+
+
+# ─────────────────────────────────────────────────────────────
+# RECUPERAR CONTRASEÑA (Híbrido: Email + Admin)
+# ─────────────────────────────────────────────────────────────
+
+def recuperar_password_view(request):
+    """Flujo híbrido de recuperación de contraseña.
+    1. Verifica que el email existe en la BD
+    2. Si SMTP configurado → envía email con token de Django
+    3. Si SMTP no configurado → crea solicitud para el admin
+    """
+    resultado = None
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+
+        if not email or '@' not in email:
+            resultado = {'tipo': 'error', 'texto': 'Por favor ingrese un correo electrónico válido.'}
+        else:
+            # Buscar usuario por email (en User.email, Cliente.email_principal, o Cliente.emails_adicionales)
+            user_encontrado = None
+
+            # 1. Buscar en User.email
+            user_encontrado = User.objects.filter(email__iexact=email, is_active=True).first()
+
+            # 2. Si no, buscar en Cliente.email_principal → su User asociado
+            if not user_encontrado:
+                cliente = Cliente.objects.filter(email_principal__iexact=email, activo=True, user__isnull=False).first()
+                if cliente and cliente.user:
+                    user_encontrado = cliente.user
+
+            # 3. Si no, buscar en Cliente.emails_adicionales
+            if not user_encontrado:
+                for c in Cliente.objects.filter(activo=True, user__isnull=False):
+                    if c.emails_adicionales:
+                        emails_add = [e.strip().lower() for e in c.emails_adicionales.split(',')]
+                        if email in emails_add:
+                            user_encontrado = c.user
+                            break
+
+            if not user_encontrado:
+                resultado = {
+                    'tipo': 'no_encontrado',
+                    'texto': 'El correo ingresado no está registrado en el sistema. '
+                             'Puede solicitar ayuda al administrador completando el formulario a continuación.'
+                }
+            else:
+                # ── Verificar si SMTP está configurado ──
+                from .notificaciones import _smtp_configurado
+                if _smtp_configurado():
+                    # Opción A: Enviar email con token de reset
+                    from django.contrib.auth.tokens import default_token_generator
+                    from django.utils.http import urlsafe_base64_encode
+                    from django.utils.encoding import force_bytes
+
+                    token = default_token_generator.make_token(user_encontrado)
+                    uid = urlsafe_base64_encode(force_bytes(user_encontrado.pk))
+
+                    if request:
+                        base_url = request.build_absolute_uri('/')[:-1]
+                    else:
+                        base_url = 'https://unidossis.pythonanywhere.com'
+
+                    reset_url = f'{base_url}/recuperar-password/confirmar/{uid}/{token}/'
+
+                    send_mail(
+                        subject='🔑 Restablecer contraseña — Unidossis PQRS',
+                        message=(
+                            f'Hola {user_encontrado.get_full_name() or user_encontrado.username},\n\n'
+                            f'Recibimos una solicitud para restablecer su contraseña.\n\n'
+                            f'Haga clic en el siguiente enlace para crear una nueva contraseña:\n'
+                            f'{reset_url}\n\n'
+                            f'Este enlace es válido por 24 horas y solo puede usarse una vez.\n\n'
+                            f'Si usted no solicitó este cambio, ignore este mensaje.\n\n'
+                            f'— Unidossis PQRS'
+                        ),
+                        from_email=None,  # Usa DEFAULT_FROM_EMAIL
+                        recipient_list=[email],
+                        fail_silently=False,
+                    )
+
+                    LogActividad.objects.create(
+                        usuario=user_encontrado,
+                        accion='Solicitud de restablecimiento de contraseña (email enviado)',
+                        detalle=f'Email enviado a: {email}'
+                    )
+
+                    resultado = {
+                        'tipo': 'email_enviado',
+                        'texto': f'Hemos enviado un enlace de recuperación al correo {email}. '
+                                 'Revise su bandeja de entrada (y la carpeta de spam).'
+                    }
+                else:
+                    # Opción B: Crear solicitud para el admin
+                    ip = _get_client_ip(request)
+                    SolicitudResetPassword.objects.create(
+                        user=user_encontrado,
+                        email_ingresado=email,
+                        ip=ip,
+                    )
+
+                    LogActividad.objects.create(
+                        usuario=user_encontrado,
+                        accion='Solicitud de restablecimiento de contraseña (pendiente admin)',
+                        detalle=f'Email: {email} | IP: {ip}'
+                    )
+
+                    resultado = {
+                        'tipo': 'solicitud_admin',
+                        'texto': 'Su solicitud ha sido registrada. El administrador del sistema '
+                                 'le asignará una nueva contraseña temporal. '
+                                 'Será contactado por el equipo de soporte.'
+                    }
+
+    # Si es solicitud al admin cuando email NO fue encontrado
+    if request.method == 'POST' and request.POST.get('accion') == 'solicitar_admin':
+        nombre = request.POST.get('nombre_completo', '').strip()
+        email_contacto = request.POST.get('email_contacto', '').strip()
+        username_recordado = request.POST.get('username_recordado', '').strip()
+        detalle = request.POST.get('detalle', '').strip()
+
+        if nombre and email_contacto:
+            LogActividad.objects.create(
+                usuario=None,
+                accion='Solicitud de ayuda con acceso (usuario no encontrado)',
+                detalle=f'Nombre: {nombre} | Email: {email_contacto} | '
+                        f'Username recordado: {username_recordado} | Detalle: {detalle}'
+            )
+            resultado = {
+                'tipo': 'solicitud_admin',
+                'texto': 'Su solicitud de ayuda ha sido registrada exitosamente. '
+                         'El administrador se comunicará con usted al correo proporcionado.'
+            }
+
+    return render(request, 'tickets/recuperar_password.html', {'resultado': resultado})
+
+
+def recuperar_password_confirm_view(request, uidb64, token):
+    """Confirma el token de reset y permite crear nueva contraseña."""
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.http import urlsafe_base64_decode
+
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == 'POST':
+            new_password = request.POST.get('new_password', '')
+            confirm_password = request.POST.get('confirm_password', '')
+
+            error = None
+            if len(new_password) < 8:
+                error = 'La contraseña debe tener al menos 8 caracteres.'
+            elif new_password != confirm_password:
+                error = 'Las contraseñas no coinciden.'
+
+            if error:
+                return render(request, 'tickets/recuperar_password_confirm.html', {
+                    'valid': True, 'error': error, 'uidb64': uidb64, 'token': token
+                })
+
+            user.set_password(new_password)
+            user.save()
+
+            # Desactivar flag de cambio obligatorio si existe
+            if hasattr(user, 'perfil'):
+                user.perfil.debe_cambiar_password = False
+                user.perfil.save(update_fields=['debe_cambiar_password'])
+
+            LogActividad.objects.create(
+                usuario=user,
+                accion='Contraseña restablecida exitosamente via enlace de recuperación',
+            )
+
+            return render(request, 'tickets/recuperar_password_completado.html')
+
+        return render(request, 'tickets/recuperar_password_confirm.html', {
+            'valid': True, 'uidb64': uidb64, 'token': token
+        })
+    else:
+        return render(request, 'tickets/recuperar_password_confirm.html', {'valid': False})
 
 
 # ─────────────────────────────────────────────────────────────
@@ -2502,5 +2688,48 @@ def api_simular_opciones(request):
         'ok': True,
         'regionales': [{'key': k, 'label': v} for k, v in regionales],
         'clientes': clientes,
+    })
+
+
+# ─────────────────────────────────────────────────────────────
+# HEALTH CHECK
+# ─────────────────────────────────────────────────────────────
+
+def health_check(request):
+    """Endpoint público para monitoreo del sistema. No requiere autenticación."""
+    import django
+    from django.db import connection
+
+    # Verificar base de datos
+    db_ok = False
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        db_ok = True
+    except Exception:
+        pass
+
+    # Verificar IA configurada
+    from .ia_engine import GEMINI_API_KEY
+    ia_configurada = bool(GEMINI_API_KEY)
+
+    # Contar registros básicos
+    total_tickets = Ticket.objects.count()
+    total_clientes = Cliente.objects.count()
+    total_usuarios = User.objects.count()
+
+    status = 'ok' if db_ok else 'degraded'
+
+    return JsonResponse({
+        'status': status,
+        'version': '1.0.0',
+        'django': django.get_version(),
+        'database': 'ok' if db_ok else 'error',
+        'ia_engine': 'configured' if ia_configurada else 'not_configured',
+        'stats': {
+            'tickets': total_tickets,
+            'clientes': total_clientes,
+            'usuarios': total_usuarios,
+        },
     })
 

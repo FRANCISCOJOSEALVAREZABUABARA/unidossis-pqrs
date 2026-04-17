@@ -128,16 +128,41 @@ class Ticket(models.Model):
         diff = timezone.now() - self.fecha_ingreso
         return diff.days
 
+    # Caché en memoria para ConfiguracionSLA (evita consulta DB por cada ticket)
+    _sla_config_cache = None
+    _sla_config_ts = 0
+
+    @classmethod
+    def _get_sla_config(cls):
+        """Obtiene la configuración SLA activa con caché de 60 segundos."""
+        import time
+        now = time.time()
+        if cls._sla_config_cache is None or (now - cls._sla_config_ts) > 60:
+            try:
+                config = ConfiguracionSLA.objects.filter(activo=True).first()
+                if config:
+                    cls._sla_config_cache = {
+                        'peligro': config.dias_alerta_peligro,
+                        'vencido': config.dias_alerta_vencido,
+                    }
+                else:
+                    cls._sla_config_cache = {'peligro': 11, 'vencido': 15}
+            except Exception:
+                cls._sla_config_cache = {'peligro': 11, 'vencido': 15}
+            cls._sla_config_ts = now
+        return cls._sla_config_cache
+
     def estado_sla(self):
         if self.estado in ['resuelto', 'cancelado']:
             return 'cerrado'
         dias = self.dias_transcurridos()
-        if dias <= 10:
-            return 'bien' # < 11 días
-        elif dias <= 14:
-            return 'peligro' # 11-14 días
+        config = self._get_sla_config()
+        if dias < config['peligro']:
+            return 'bien'
+        elif dias < config['vencido']:
+            return 'peligro'
         else:
-            return 'vencido' # >= 15 días
+            return 'vencido'
     
     class Meta:
         verbose_name = "Ticket PQRS"
@@ -433,3 +458,29 @@ class IntentoLogin(models.Model):
     def __str__(self):
         estado = "✅" if self.exitoso else "❌"
         return f"{estado} {self.username} desde {self.ip} ({self.fecha.strftime('%d/%m/%Y %H:%M')})"
+
+
+class SolicitudResetPassword(models.Model):
+    """Solicitud de restablecimiento de contraseña cuando el SMTP no está configurado.
+    El admin ve estas solicitudes pendientes y resetea manualmente."""
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('resuelta', 'Resuelta'),
+        ('rechazada', 'Rechazada'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='solicitudes_reset')
+    email_ingresado = models.EmailField(verbose_name="Email ingresado por el usuario")
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    ip = models.GenericIPAddressField(blank=True, null=True)
+    resuelta_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='resets_resueltos')
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_resolucion = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Solicitud de Reset de Contraseña"
+        verbose_name_plural = "Solicitudes de Reset de Contraseña"
+        ordering = ['-fecha_solicitud']
+
+    def __str__(self):
+        return f"Reset para {self.user.username} — {self.get_estado_display()}"
+

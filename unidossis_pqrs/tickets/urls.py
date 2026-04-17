@@ -7,6 +7,8 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('acceso-denegado/', views.acceso_denegado_view, name='acceso_denegado'),
     path('cambiar-password/', views.cambiar_password_view, name='cambiar_password'),
+    path('recuperar-password/', views.recuperar_password_view, name='recuperar_password'),
+    path('recuperar-password/confirmar/<str:uidb64>/<str:token>/', views.recuperar_password_confirm_view, name='recuperar_password_confirm'),
 
     # ─── Dashboard y Tickets ─────────────────────────────────
     path('dashboard/', views.dashboard_view, name='dashboard'),
@@ -55,4 +57,7 @@ urlpatterns = [
     path('control-cambios/api/detalle/<str:commit_hash>/', views.api_detalle_commit, name='api_detalle_commit'),
     path('control-cambios/api/diff/<str:commit_hash>/', views.api_diff_commit, name='api_diff_commit'),
     path('control-cambios/api/revertir/<str:commit_hash>/', views.api_revertir_commit, name='api_revertir_commit'),
+
+    # ─── Health Check ────────────────────────────────────────
+    path('health/', views.health_check, name='health_check'),
 ]

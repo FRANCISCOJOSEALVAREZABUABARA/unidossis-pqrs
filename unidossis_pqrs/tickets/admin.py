@@ -3,7 +3,8 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from .models import (
     Ticket, ArchivoAdjunto, Cliente, Ciudad, Cargo, MaestroInstitucion, PerfilUsuario,
-    ConfiguracionSLA, AlertaSLA, LogActividad, ComentarioTicket, EncuestaSatisfaccion, FeedbackIA
+    ConfiguracionSLA, AlertaSLA, LogActividad, ComentarioTicket, EncuestaSatisfaccion, FeedbackIA,
+    SolicitudResetPassword
 )
 
 # Inline para PerfilUsuario dentro de User
@@ -92,4 +93,10 @@ class EncuestaSatisfaccionAdmin(admin.ModelAdmin):
 class FeedbackIAAdmin(admin.ModelAdmin):
     list_display = ['ticket', 'corrector', 'tipificacion_corregida', 'criticidad_corregida', 'fecha']
     readonly_fields = ['fecha']
+
+@admin.register(SolicitudResetPassword)
+class SolicitudResetPasswordAdmin(admin.ModelAdmin):
+    list_display = ['user', 'email_ingresado', 'estado', 'fecha_solicitud', 'resuelta_por']
+    list_filter = ['estado']
+    readonly_fields = ['fecha_solicitud']
 

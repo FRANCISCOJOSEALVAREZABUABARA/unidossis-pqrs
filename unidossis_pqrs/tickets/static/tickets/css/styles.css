@@ -266,6 +266,222 @@ img { max-width: 100%; height: auto; }
     background: rgba(239, 68, 68, 0.05);
 }
 
+/* ── Sidebar Settings Button & Popover ──────────────────── */
+.sidebar-settings-wrap {
+    position: relative;
+    padding: 12px 14px;
+    border-top: 1px solid var(--border-light);
+    flex-shrink: 0;
+}
+
+.sidebar-settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    background: var(--bg);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-settings-btn:hover {
+    background: #eff6ff;
+    border-color: var(--accent-border);
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.1);
+}
+
+.sidebar-settings-btn .user-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 12px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.sidebar-settings-btn .settings-label {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-settings-btn .settings-gear-icon {
+    font-size: 13px;
+    color: var(--text-faint);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.sidebar-settings-btn:hover .settings-gear-icon {
+    color: var(--accent);
+    transform: rotate(90deg);
+}
+
+/* Settings Popover */
+.settings-popover {
+    position: fixed;
+    bottom: 72px;
+    left: 14px;
+    width: calc(var(--sidebar-width) - 28px);
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(30, 58, 138, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12),
+                0 0 0 1px rgba(255, 255, 255, 0.8) inset,
+                0 4px 16px rgba(59, 130, 246, 0.08);
+    padding: 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px) scale(0.96);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 500;
+    overflow: hidden;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+}
+
+.settings-popover.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.settings-popover-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+}
+
+.settings-popover-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 800;
+    font-size: 15px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.settings-popover-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-popover-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.settings-popover-role {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.settings-popover-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 0 12px;
+}
+
+.settings-popover-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.settings-popover-item:hover {
+    background: var(--bg);
+}
+
+.settings-popover-item:first-of-type {
+    margin-top: 4px;
+}
+
+.settings-popover-item:last-child {
+    margin-bottom: 4px;
+}
+
+.settings-popover-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.settings-popover-logout {
+    color: var(--danger);
+}
+
+.settings-popover-logout:hover {
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.settings-popover-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 10px 16px 4px;
+}
+
+/* Collapsed sidebar: settings button */
+.sidebar.collapsed .sidebar-settings-btn .settings-label,
+.sidebar.collapsed .sidebar-settings-btn .settings-gear-icon {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-settings-btn {
+    justify-content: center;
+    padding: 10px;
+}
+
+.sidebar.collapsed .settings-popover {
+    left: calc(var(--sidebar-collapsed) + 8px);
+    bottom: 12px;
+    right: auto;
+    width: 240px;
+}
+
 /* User info in sidebar */
 .sidebar-user {
     padding: 16px 14px;

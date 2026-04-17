@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumen de Cambios - UNIDOSSIS PQRS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563EB;
+            --text-color: #1e293b;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        h1, h2, h3 {
+            color: #0f172a;
+        }
+        h1 {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            margin-top: 40px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .alert-info {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+        }
+        .alert-warning {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+        }
+        .alert-success {
+            background-color: #f0fdf4;
+            border-left: 4px solid #10b981;
+        }
+        code {
+            background-color: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #1e293b;
+            color: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Documento de Cambios — Sesión de Estabilización</h1>
+        <p><strong>Proyecto:</strong> UNIDOSSIS PQRS <br>
+        <strong>Fecha:</strong> 17 de Abril de 2026</p>
+
+        <div class="alert alert-info">
+            <strong>Resumen Ejecutivo:</strong> Se implementaron 6 mejoras fundamentales que elevan el proyecto de un prototipo funcional a una plataforma más robusta y segura.
+        </div>
+
+        <h2>Resumen de Mejoras</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Cambio</th>
+                    <th>Tipo</th>
+                    <th>Impacto</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>Eliminación de API Key hardcodeada</td><td>🔒 Seguridad</td><td>Crítico</td></tr>
+                <tr><td>2</td><td>SLA dinámico conectado a ConfiguracionSLA</td><td>🔗 Bug Fix</td><td>Alto</td></tr>
+                <tr><td>3</td><td>Endpoint <code>/health/</code></td><td>📊 Monitoreo</td><td>Medio</td></tr>
+                <tr><td>4</td><td>Suite de 67 tests automatizados</td><td>✅ Calidad</td><td>Crítico</td></tr>
+                <tr><td>5</td><td>Recuperación de contraseña híbrida</td><td>👤 UX</td><td>Alto</td></tr>
+                <tr><td>6</td><td>Modelo SolicitudResetPassword + Admin</td><td>🗃️ Datos</td><td>Medio</td></tr>
+            </tbody>
+        </table>
+
+        <h2>1. 🔒 Eliminación de API Key del Código Fuente</h2>
+        <p><strong>¿Qué se hizo?</strong> Se eliminó la clave real de la API de Google Gemini que estaba expuesta directamente en <code>ia_engine.py</code>.</p>
+        <p><strong>Antes:</strong> Cualquier persona con acceso al código podía ver y usar la clave de Gemini.<br>
+        <strong>Ahora:</strong> La clave está protegida exclusivamente por variables de entorno. Si no hay clave, el motor de IA cae al modo fallback (clasificación manual) sin errores.</p>
+
+        <h2>2. 🔗 SLA Dinámico — El Panel de Configuración Ahora Funciona</h2>
+        <p><strong>¿Cuál era el problema?</strong> El sistema tenía un panel en la administración para configurar los días de SLA, pero el código internamente usaba valores fijos (10 y 14 días). El panel no servía de nada.</p>
+        <p><strong>Ahora:</strong> La función <code>estado_sla()</code> lee de la tabla <code>ConfiguracionSLA</code> con un caché en memoria de 60 segundos. Si el admin cambia los umbrales, los semáforos del dashboard lo reflejan casi de inmediato sin afectar el rendimiento de la base de datos.</p>
+
+        <h2>3. 📊 Endpoint <code>/health/</code> — Monitoreo del Sistema</h2>
+        <p><strong>¿Qué es?</strong> Es una ruta pública oculta (una "puerta trasera" segura) que devuelve un diagnóstico instantáneo de la salud de toda la plataforma en formato JSON.</p>
+        <p><strong>¿Dónde puedo verlo?</strong> Simplemente escribiendo <code>/health/</code> al final de la URL del sistema. Por ejemplo: <a href="http://127.0.0.1:8000/health/" target="_blank">http://127.0.0.1:8000/health/</a> (o en el dominio de producción).</p>
+        <p><strong>¿Para qué sirve?</strong></p>
+        <ul>
+            <li><strong>Sistemas externos:</strong> Herramientas como UptimeRobot pueden visitar esta URL cada 5 minutos. Si la respuesta no es "ok", te envían una alerta al celular de que el sistema se cayó.</li>
+            <li><strong>Diagnóstico rápido:</strong> Si el cliente reporta que "el sistema está lento", entras a esta URL y ves de inmediato si es problema de la base de datos, del motor de IA o de conexión.</li>
+            <li><strong>Despliegues seguros:</strong> Cuando actualizamos el sistema (con PUBLICAR.bat), podemos verificar automáticamente esta URL para confirmar que el servidor subió correctamente.</li>
+        </ul>
+        <img src="img/health.png" alt="Respuesta JSON del Health Check">
+        <p><strong>¿Qué verifica internamente?</strong> Comprueba la conexión a la base de datos (haciendo un conteo rápido de registros), verifica si las credenciales de la IA de Google están configuradas, y reporta la versión actual del código (para saber si la actualización se aplicó).</p>
+
+        <h2>4. ✅ Suite Completa de 67 Tests Automatizados</h2>
+        <p>El proyecto pasó de no tener tests a tener una suite robusta con 67 pruebas automatizadas que cubren las funciones críticas.</p>
+        <div class="alert alert-success">
+            <strong>Resultado:</strong> Ran 67 tests in ~55s → OK ✅
+        </div>
+        <ul>
+            <li><strong>Modelos:</strong> SLA dinámico, IDs únicos, adjuntos, logs.</li>
+            <li><strong>Autenticación:</strong> Rate limiting (bloqueo tras 5 intentos fallidos), login/logout.</li>
+            <li><strong>Seguridad:</strong> Aislamiento de datos (un cliente solo ve lo suyo, un director regional solo su región).</li>
+            <li><strong>APIs y Vistas:</strong> Búsqueda, creación, cambio de estado, encuestas CSAT.</li>
+            <li><strong>IA y Notificaciones:</strong> Mock de Gemini y simulación de envío de correos.</li>
+        </ul>
+
+        <h2>5. 🔑 Recuperación de Contraseña — Sistema Híbrido</h2>
+        <p>Se implementó un flujo completo de "¿Olvidó su contraseña?".</p>
+        
+        <h3>Login Actualizado</h3>
+        <p>Se agregó el enlace de recuperación en el formulario de acceso.</p>
+        <img src="img/login.png" alt="Pantalla de Login con enlace de recuperación">
+
+        <h3>Paso 1: Solicitud</h3>
+        <p>El usuario ingresa su correo. El sistema busca de manera inteligente en el email del usuario y en los emails asociados al Cliente institucional.</p>
+        <img src="img/recovery.png" alt="Formulario para ingresar correo">
+
+        <h3>Sistema Inteligente (Fallback)</h3>
+        <p>Si el sistema tiene configurado el correo (SMTP), envía un enlace temporal seguro válido por 24 horas.<br>
+        Si el correo <strong>NO existe</strong> en el sistema, muestra un formulario para que el usuario solicite ayuda al administrador:</p>
+        <img src="img/admin_form.png" alt="Formulario de ayuda al administrador">
+
+        <h2>6. 🗃️ Modelo SolicitudResetPassword</h2>
+        <p>Cuando el SMTP no está configurado, las solicitudes de los usuarios que olvidaron su contraseña se guardan en la base de datos usando el nuevo modelo <code>SolicitudResetPassword</code>.</p>
+        <p><strong>Beneficio:</strong> El administrador puede entrar al panel de Django Admin, ver las solicitudes pendientes, contactar al usuario, restablecer la contraseña y marcar la solicitud como resuelta. Todo el proceso queda auditado.</p>
+
+        <div class="alert alert-info">
+            <h3>📈 Seguimiento del Plan de Auditoría Inicial</h3>
+            <p>Al iniciar la sesión, realizamos una auditoría completa del proyecto (fase 1) para identificar vulnerabilidades y puntos de mejora antes de salir a producción. A continuación el balance:</p>
+            
+            <h4>✅ Lo que SE IMPLEMENTÓ (Fase de Estabilización):</h4>
+            <ul>
+                <li><strong>Protección de Credenciales (Crítico):</strong> Se eliminó la dependencia de tener la API Key de Gemini escrita directamente en el código. Ahora el sistema es seguro para estar en un repositorio.</li>
+                <li><strong>Lógica SLA Funcional (Alto):</strong> Se corrigió el error silencioso donde el panel administrativo de SLA no afectaba los colores del semáforo. Ahora el cálculo de tiempos responde al panel en tiempo real.</li>
+                <li><strong>Validación Continua (Crítico):</strong> Se implementó la suite de automatización con 67 pruebas. Esto garantiza que cualquier cambio futuro no rompa el sistema sin avisar.</li>
+                <li><strong>Endpoint de Salud (Medio):</strong> Se creó la ruta <code>/health/</code> para monitoreo externo, asegurando que podemos medir si el servidor está "vivo" en todo momento.</li>
+                <li><strong>Flujo de Recuperación de Contraseña (Alto):</strong> Un sistema híbrido para usuarios olvidadizos, reduciendo la carga operativa del administrador y manteniendo trazabilidad de quién solicitó accesos.</li>
+            </ul>
+
+            <h4>⏳ Lo que FALTA por Implementar (Fase 2 - Crecimiento):</h4>
+            <p>Estos puntos quedaron registrados para nuestra próxima fase, ya que requieren de servicios externos o cambios arquitectónicos mayores:</p>
+            <ul>
+                <li><strong>Seccionar por Módulos (Refactorización):</strong> Actualmente el archivo <code>views.py</code> es un "monolito" gigante de más de 2,500 líneas de código. Esto lo hace difícil de mantener. Está pendiente dividirlo en archivos más pequeños y especializados (ej: <code>views_auth.py</code>, <code>views_dashboard.py</code>, <code>views_tickets.py</code>).</li>
+                <li><strong>Caché de Consultas Avanzado:</strong> Aunque en esta fase <em>sí implementamos</em> un mini-caché de 60 segundos específicamente para la configuración del SLA (para no saturar la base de datos cada vez que pinta un semáforo), <strong>aún falta</strong> implementar un sistema de caché global (usando Redis o Memcached) para las consultas pesadas del Dashboard (los KPIs y gráficos), lo cual acelerará drásticamente la carga de la pantalla principal.</li>
+                <li><strong>Ingesta Automática de Correos:</strong> Falta conectar el sistema por IMAP para que los correos que lleguen a la bandeja se conviertan solos en tickets. (Dependemos de tener las contraseñas de ese correo).</li>
+                <li><strong>Procesamiento Asíncrono (Celery/Redis):</strong> Actualmente, cuando el usuario radica un ticket, la página se queda cargando mientras la IA de Google analiza el texto. Hay que mover esto a un proceso "en segundo plano" (asíncrono) para que el sistema sea inmediato.</li>
+                <li><strong>Almacenamiento Seguro (Amazon S3):</strong> En PythonAnywhere, los archivos subidos (como fotos o PDFs) pueden perderse al reiniciar el servidor. Debemos conectar un "disco duro en la nube" (AWS S3) para que los archivos vivan ahí de forma permanente.</li>
+                <li><strong>Exportación a PDF:</strong> Implementar la capacidad de generar reportes en PDF con bibliotecas como <code>Weasyprint</code> o <code>ReportLab</code> para entrega formal al cliente.</li>
+                <li><strong>Branding de Correos:</strong> Diseñar plantillas HTML visualmente atractivas ("Premium") para todas las notificaciones salientes del sistema.</li>
+            </ul>
+        </div>
+        
+    </div>
+</body>
+</html>

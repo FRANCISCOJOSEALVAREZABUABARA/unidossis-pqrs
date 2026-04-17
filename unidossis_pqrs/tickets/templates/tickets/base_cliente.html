@@ -220,25 +220,52 @@ function cambiarRolCliente(rol) {
             </a>
         </div>
 
-        <!-- User Info -->
-        <div class="sidebar-user">
-            <div class="user-avatar">
-                <i class="fa-solid fa-building" style="font-size:14px;"></i>
-            </div>
-            <div class="user-info">
-                <div class="user-name">{{ cliente.nombre|default:request.user.username|truncatechars:25 }}</div>
-                <div class="user-role">Portal Institucional</div>
-            </div>
-        </div>
+        <!-- Settings Button (compact) -->
+        <div class="sidebar-settings-wrap">
+            <button class="sidebar-settings-btn" id="sidebarSettingsBtn" onclick="toggleSettingsPopover(event)" title="Configuración">
+                <div class="user-avatar">
+                    <i class="fa-solid fa-building" style="font-size:12px;"></i>
+                </div>
+                <span class="settings-label">{{ cliente.nombre|default:request.user.username|truncatechars:18 }}</span>
+                <i class="fa-solid fa-gear settings-gear-icon"></i>
+            </button>
 
-        <!-- Logout -->
-        <div class="nav-footer">
-            <a href="{% url 'logout' %}" class="nav-item logout">
-                <i class="fa-solid fa-power-off"></i>
-                <span>Cerrar Sesión</span>
-            </a>
+            <!-- Settings Popover -->
+            <div class="settings-popover" id="settingsPopover">
+                <div class="settings-popover-header">
+                    <div class="settings-popover-avatar" style="background:linear-gradient(135deg, #6366f1, #8b5cf6);">
+                        <i class="fa-solid fa-building" style="font-size:14px;"></i>
+                    </div>
+                    <div class="settings-popover-info">
+                        <div class="settings-popover-name">{{ cliente.nombre|default:request.user.username|truncatechars:25 }}</div>
+                        <div class="settings-popover-role">Portal Institucional</div>
+                    </div>
+                </div>
+                <div class="settings-popover-divider"></div>
+                <a href="{% url 'logout' %}" class="settings-popover-item settings-popover-logout">
+                    <div class="settings-popover-icon" style="background:#fee2e2; color:#ef4444;">
+                        <i class="fa-solid fa-power-off"></i>
+                    </div>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </div>
         </div>
     </aside>
+
+<script>
+function toggleSettingsPopover(e) {
+    e.stopPropagation();
+    const popover = document.getElementById('settingsPopover');
+    popover.classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+    const wrap = document.querySelector('.sidebar-settings-wrap');
+    const popover = document.getElementById('settingsPopover');
+    if (popover && wrap && !wrap.contains(e.target)) {
+        popover.classList.remove('open');
+    }
+});
+</script>
 
     <!-- ═══════ MAIN CONTENT ═══════ -->
     <main class="main-content" {% if simulacion_activa %}style="margin-top: 0;"{% endif %}>

@@ -4,7 +4,7 @@ import requests
 
 # Configuracion del motor UNIDOSS.IA
 # Configuración segura: la API key debe definirse como variable de entorno
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyDPzRKxXAM9eOACGwDn0si1HXZF6r-OmU0")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 MODELO_IA = "gemini-1.5-flash"
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODELO_IA}:generateContent?key={GEMINI_API_KEY}" if GEMINI_API_KEY else None
 

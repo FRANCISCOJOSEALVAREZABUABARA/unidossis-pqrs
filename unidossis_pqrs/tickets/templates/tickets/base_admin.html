@@ -80,52 +80,75 @@
                 <span>Reportes & Analytics</span>
             </a>
             {% endif %}
-
-            <!-- Configuración (solo superadmin y admin) -->
-            {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' %}
-            <div class="nav-section-label">Configuración</div>
-            <a href="{% url 'configurar_sla' %}" class="nav-item {% if nav_active == 'sla' %}active{% endif %}">
-                <i class="fa-solid fa-sliders"></i>
-                <span>Configurar SLA</span>
-            </a>
-            {% endif %}
-            {% if perfil.rol == 'superadmin' %}
-            <a href="/admin/" class="nav-item">
-                <i class="fa-solid fa-screwdriver-wrench"></i>
-                <span>Admin Django</span>
-            </a>
-            <a href="{% url 'monitoreo' %}" class="nav-item {% if nav_active == 'monitoreo' %}active{% endif %}">
-                <i class="fa-solid fa-chart-area"></i>
-                <span>Monitor del Sistema</span>
-            </a>
-            <a href="{% url 'control_cambios' %}" class="nav-item {% if nav_active == 'control_cambios' %}active{% endif %}">
-                <i class="fa-solid fa-code-branch"></i>
-                <span>Control de Cambios</span>
-            </a>
-            {% endif %}
         </div>
 
-        <!-- User Info -->
-        <div class="sidebar-user">
-            <div class="user-avatar">
-                {{ request.user.first_name|default:request.user.username|truncatechars:1|upper }}
-            </div>
-            <div class="user-info">
-                <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
-                <div class="user-role">{{ perfil.get_rol_display|default:"Staff" }}</div>
-            </div>
-        </div>
+        <!-- Settings Button (compact) -->
+        <div class="sidebar-settings-wrap">
+            <button class="sidebar-settings-btn" id="sidebarSettingsBtn" onclick="toggleSettingsPopover(event)" title="Configuración">
+                <div class="user-avatar">
+                    {{ request.user.first_name|default:request.user.username|truncatechars:1|upper }}
+                </div>
+                <span class="settings-label">{{ request.user.first_name|default:request.user.username }}</span>
+                <i class="fa-solid fa-gear settings-gear-icon"></i>
+            </button>
 
-        <!-- Footer Actions -->
-        <div class="nav-footer">
-            <a href="javascript:void(0)" onclick="document.getElementById('modal-cambiar-password').classList.add('visible')" class="nav-item" style="color:var(--text-muted);">
-                <i class="fa-solid fa-key"></i>
-                <span>Cambiar Contraseña</span>
-            </a>
-            <a href="{% url 'logout' %}" class="nav-item logout">
-                <i class="fa-solid fa-power-off"></i>
-                <span>Cerrar Sesión</span>
-            </a>
+            <!-- Settings Popover -->
+            <div class="settings-popover" id="settingsPopover">
+                <div class="settings-popover-header">
+                    <div class="settings-popover-avatar">
+                        {{ request.user.first_name|default:request.user.username|truncatechars:1|upper }}
+                    </div>
+                    <div class="settings-popover-info">
+                        <div class="settings-popover-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                        <div class="settings-popover-role">{{ perfil.get_rol_display|default:"Staff" }}</div>
+                    </div>
+                </div>
+
+                {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' %}
+                <div class="settings-popover-divider"></div>
+                <div class="settings-popover-section-label">Configuración</div>
+                <a href="{% url 'configurar_sla' %}" class="settings-popover-item">
+                    <div class="settings-popover-icon" style="background:#f0fdf4; color:#16a34a;">
+                        <i class="fa-solid fa-sliders"></i>
+                    </div>
+                    <span>Configurar SLA</span>
+                </a>
+                {% endif %}
+                {% if perfil.rol == 'superadmin' %}
+                <a href="/admin/" class="settings-popover-item">
+                    <div class="settings-popover-icon" style="background:#fef3c7; color:#d97706;">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                    </div>
+                    <span>Admin Django</span>
+                </a>
+                <a href="{% url 'monitoreo' %}" class="settings-popover-item">
+                    <div class="settings-popover-icon" style="background:#ede9fe; color:#7c3aed;">
+                        <i class="fa-solid fa-chart-area"></i>
+                    </div>
+                    <span>Monitor del Sistema</span>
+                </a>
+                <a href="{% url 'control_cambios' %}" class="settings-popover-item">
+                    <div class="settings-popover-icon" style="background:#e0f2fe; color:#0284c7;">
+                        <i class="fa-solid fa-code-branch"></i>
+                    </div>
+                    <span>Control de Cambios</span>
+                </a>
+                {% endif %}
+
+                <div class="settings-popover-divider"></div>
+                <a href="javascript:void(0)" class="settings-popover-item" onclick="document.getElementById('modal-cambiar-password').classList.add('visible'); toggleSettingsPopover(event);">
+                    <div class="settings-popover-icon" style="background:#eff6ff; color:#3b82f6;">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <span>Cambiar Contraseña</span>
+                </a>
+                <a href="{% url 'logout' %}" class="settings-popover-item settings-popover-logout">
+                    <div class="settings-popover-icon" style="background:#fee2e2; color:#ef4444;">
+                        <i class="fa-solid fa-power-off"></i>
+                    </div>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </div>
         </div>
     </aside>
 
@@ -648,7 +671,26 @@
         sidebar.classList.toggle('collapsed');
         content.classList.toggle('sidebar-collapsed');
         document.body.classList.toggle('sidebar-col');
+        // Close settings popover when collapsing/expanding
+        const popover = document.getElementById('settingsPopover');
+        if (popover) popover.classList.remove('open');
     }
+
+    // ═══════ SETTINGS POPOVER ═══════
+    function toggleSettingsPopover(e) {
+        e.stopPropagation();
+        const popover = document.getElementById('settingsPopover');
+        popover.classList.toggle('open');
+    }
+
+    // Close popover on outside click
+    document.addEventListener('click', function(e) {
+        const wrap = document.querySelector('.sidebar-settings-wrap');
+        const popover = document.getElementById('settingsPopover');
+        if (popover && wrap && !wrap.contains(e.target)) {
+            popover.classList.remove('open');
+        }
+    });
 
     // ═══════ CAMBIAR CONTRASEÑA ═══════
     function cerrarModalPassword() {
