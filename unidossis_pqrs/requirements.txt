@@ -38,8 +38,8 @@ idna==3.6
 urllib3==2.2.1
 
 # ─── Utilidades ───────────────────────────────────────────────
-pydantic==2.6.4
-typing_extensions==4.10.0
+pydantic>=2.6.4
+typing_extensions>=4.11.0
 tenacity==8.2.3
 tqdm==4.66.2
 packaging==23.2
