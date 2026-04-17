@@ -190,7 +190,7 @@
     </main>
 </div>
 
-{% if request.rol_original == 'superadmin' or perfil.rol == 'superadmin' %}
+{% if request.rol_original == 'superadmin' or request.user.perfil.rol == 'superadmin' %}
 <!-- ═══════ VIEW AS TOOLBAR (solo superadmin real) ═══════ -->
 <div id="viewas-fab" style="
     position: fixed;
