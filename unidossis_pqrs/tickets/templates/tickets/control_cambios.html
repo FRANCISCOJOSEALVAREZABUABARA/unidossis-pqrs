@@ -11,6 +11,84 @@
     .cc-header h1 { font-size: 22px; font-weight: 700; color: var(--text-dark); margin: 0; }
     .cc-header h1 i { color: #8b5cf6; margin-right: 8px; }
 
+    /* CI Status Badge */
+    .cc-ci-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+        text-decoration: none; letter-spacing: 0.3px; transition: all 0.2s;
+    }
+    .cc-ci-badge:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .cc-ci-success { background: #d1fae5; color: #065f46; border: 1.5px solid #6ee7b7; }
+    .cc-ci-failure { background: #fee2e2; color: #991b1b; border: 1.5px solid #fca5a5; }
+    .cc-ci-running { background: #dbeafe; color: #1e40af; border: 1.5px solid #93c5fd; animation: pulse 2s infinite; }
+    .cc-ci-unknown { background: #f3f4f6; color: #6b7280; border: 1.5px solid #d1d5db; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+    /* Version Banner */
+    .cc-version-banner {
+        display: flex; align-items: center; gap: 14px; padding: 16px 22px;
+        background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+        border-radius: 14px; margin-bottom: 24px;
+        border: 1.5px solid #c4b5fd;
+    }
+    .cc-version-tag {
+        font-size: 22px; font-weight: 900; color: #7c3aed;
+        font-family: 'Courier New', monospace; letter-spacing: 1px;
+    }
+    .cc-version-info { flex: 1; }
+    .cc-version-info strong { font-size: 14px; color: var(--text-dark); }
+    .cc-version-info span { font-size: 12px; color: var(--text-muted); display: block; margin-top: 2px; }
+
+    /* Releases section */
+    .cc-releases-section {
+        background: white; border-radius: 14px; padding: 20px 22px;
+        border: 1px solid var(--border-light); margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .cc-releases-title {
+        font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 14px;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .cc-releases-title i { color: #8b5cf6; }
+    .cc-release-item {
+        display: flex; align-items: center; gap: 12px; padding: 10px 0;
+        border-bottom: 1px solid var(--border-light);
+    }
+    .cc-release-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .cc-release-tag {
+        font-family: 'Courier New', monospace; font-size: 13px; font-weight: 700;
+        background: #f5f3ff; color: #7c3aed; padding: 4px 12px; border-radius: 8px;
+        min-width: 80px; text-align: center;
+    }
+    .cc-release-meta { font-size: 12px; color: var(--text-muted); }
+    .cc-release-no-tags {
+        text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px;
+    }
+    .cc-release-no-tags i { color: #c4b5fd; font-size: 20px; display: block; margin-bottom: 6px; }
+
+    /* Changelog preview */
+    .cc-changelog-section {
+        background: white; border-radius: 14px; padding: 20px 22px;
+        border: 1px solid var(--border-light); margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .cc-changelog-title {
+        font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 14px;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .cc-changelog-title i { color: #8b5cf6; margin-right: 6px; }
+    .cc-changelog-content {
+        background: #f8fafc; border-radius: 10px; padding: 16px;
+        font-size: 13px; line-height: 1.7; color: var(--text-dark);
+        max-height: 300px; overflow-y: auto; white-space: pre-wrap;
+        font-family: 'Courier New', monospace;
+        border: 1px solid var(--border-light);
+    }
+    .cc-changelog-empty {
+        text-align: center; padding: 30px; color: var(--text-muted); font-size: 13px;
+    }
+    .cc-changelog-empty i { font-size: 28px; display: block; margin-bottom: 8px; color: #c4b5fd; }
+
     .cc-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .cc-btn {
         padding: 8px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
@@ -138,11 +216,17 @@
         padding: 2px 8px; border-radius: 6px; margin-right: 6px;
         vertical-align: middle;
     }
-    .cc-prefix-feat { background: #dbeafe; color: #1d4ed8; }
-    .cc-prefix-fix { background: #fce7f3; color: #be185d; }
-    .cc-prefix-ci { background: #e0e7ff; color: #4338ca; }
-    .cc-prefix-config { background: #fef3c7; color: #b45309; }
-    .cc-prefix-other { background: #f3f4f6; color: #6b7280; }
+    .cc-prefix-feat    { background: #dbeafe; color: #1d4ed8; }
+    .cc-prefix-fix     { background: #fce7f3; color: #be185d; }
+    .cc-prefix-ci      { background: #e0e7ff; color: #4338ca; }
+    .cc-prefix-docs    { background: #f0fdf4; color: #166534; }
+    .cc-prefix-style   { background: #fdf4ff; color: #86198f; }
+    .cc-prefix-refactor{ background: #fff7ed; color: #9a3412; }
+    .cc-prefix-perf    { background: #fefce8; color: #713f12; }
+    .cc-prefix-test    { background: #f0fdf4; color: #14532d; }
+    .cc-prefix-chore   { background: #f8fafc; color: #475569; }
+    .cc-prefix-revert  { background: #fef2f2; color: #991b1b; }
+    .cc-prefix-other   { background: #f3f4f6; color: #6b7280; }
 
     .cc-commit-actions {
         display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
@@ -259,13 +343,53 @@
 <div class="cc-header">
     <h1><i class="fa-solid fa-code-branch"></i> Control de Cambios</h1>
     <div class="cc-actions">
+        <!-- Badge de estado CI/CD -->
+        {% if ci_status == 'success' %}
+        <a href="{{ ci_url }}" target="_blank" class="cc-ci-badge cc-ci-success">
+            <i class="fa-solid fa-circle-check"></i> CI Pasó
+        </a>
+        {% elif ci_status == 'failure' %}
+        <a href="{{ ci_url }}" target="_blank" class="cc-ci-badge cc-ci-failure">
+            <i class="fa-solid fa-circle-xmark"></i> CI Falló
+        </a>
+        {% elif ci_status == 'in_progress' or ci_status == 'queued' %}
+        <a href="{{ ci_url }}" target="_blank" class="cc-ci-badge cc-ci-running">
+            <i class="fa-solid fa-spinner fa-spin"></i> CI Ejecutando
+        </a>
+        {% else %}
+        <a href="{{ ci_url }}" target="_blank" class="cc-ci-badge cc-ci-unknown">
+            <i class="fa-solid fa-circle-question"></i> CI Status
+        </a>
+        {% endif %}
+
         <button class="cc-btn cc-btn-outline" onclick="location.reload()">
             <i class="fa-solid fa-arrows-rotate"></i> Actualizar
         </button>
         <a href="{% url 'monitoreo' %}" class="cc-btn cc-btn-outline">
             <i class="fa-solid fa-chart-area"></i> Monitor
         </a>
+        <a href="https://github.com/FRANCISCOJOSEALVAREZABUABARA/unidossis-pqrs/actions"
+           target="_blank" class="cc-btn cc-btn-outline">
+            <i class="fa-brands fa-github"></i> GitHub Actions
+        </a>
     </div>
+</div>
+
+<!-- Version Banner -->
+<div class="cc-version-banner">
+    <div>
+        <i class="fa-solid fa-tag" style="font-size:28px; color:#8b5cf6;"></i>
+    </div>
+    <div class="cc-version-info">
+        <strong>Versión actual del sistema</strong>
+        <span>Última versión registrada en el repositorio</span>
+    </div>
+    <div class="cc-version-tag">{{ version_actual }}</div>
+    {% if releases %}
+    <div style="font-size:12px; color:#7c3aed; font-weight:600;">
+        {{ releases|length }} release{{ releases|length|pluralize }}s
+    </div>
+    {% endif %}
 </div>
 
 <!-- Sync status banner -->
@@ -355,13 +479,68 @@
 </div>
 {% endif %}
 
+<!-- Releases Section -->
+{% if releases %}
+<div class="cc-releases-section">
+    <div class="cc-releases-title">
+        <i class="fa-solid fa-tags"></i> Versiones Publicadas
+        <a href="https://github.com/FRANCISCOJOSEALVAREZABUABARA/unidossis-pqrs/releases"
+           target="_blank" class="cc-btn cc-btn-outline cc-btn-sm" style="margin-left:auto;">
+            <i class="fa-brands fa-github"></i> Ver en GitHub
+        </a>
+    </div>
+    {% for release in releases %}
+    <div class="cc-release-item">
+        <span class="cc-release-tag">{{ release.tag }}</span>
+        <div>
+            <div class="cc-release-meta">
+                {% if release.fecha %}<i class="fa-regular fa-calendar"></i> {{ release.fecha }} — {% endif %}
+                {{ release.descripcion|default:"Release publicado" }}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="cc-releases-section">
+    <div class="cc-releases-title">
+        <i class="fa-solid fa-tags"></i> Versiones Publicadas
+    </div>
+    <div class="cc-release-no-tags">
+        <i class="fa-solid fa-tag"></i>
+        Aún no hay versiones publicadas. El primer release se creará automáticamente<br>
+        cuando Release Please detecte commits con el formato <code>feat:</code> o <code>fix:</code>.
+    </div>
+</div>
+{% endif %}
+
+<!-- Changelog Preview -->
+{% if changelog_preview %}
+<div class="cc-changelog-section">
+    <div class="cc-changelog-title">
+        <span><i class="fa-solid fa-file-lines"></i> CHANGELOG — Historial de Versiones</span>
+        <a href="https://github.com/FRANCISCOJOSEALVAREZABUABARA/unidossis-pqrs/blob/main/CHANGELOG.md"
+           target="_blank" class="cc-btn cc-btn-outline cc-btn-sm">
+            <i class="fa-brands fa-github"></i> Ver completo
+        </a>
+    </div>
+    <div class="cc-changelog-content">{{ changelog_preview }}</div>
+</div>
+{% endif %}
+
 <!-- Filter tabs -->
 <div class="cc-filter-bar">
     <span class="cc-filter-label"><i class="fa-solid fa-filter"></i> Filtrar:</span>
-    <div class="cc-filter-tab active" data-filter="all" onclick="filterCommits('all', this)">Todos</div>
-    <div class="cc-filter-tab" data-filter="feat" onclick="filterCommits('feat', this)">✨ Features</div>
-    <div class="cc-filter-tab" data-filter="fix" onclick="filterCommits('fix', this)">🐛 Fixes</div>
-    <div class="cc-filter-tab" data-filter="ci" onclick="filterCommits('ci', this)">🔧 CI/Config</div>
+    <div class="cc-filter-tab active" data-filter="all"  onclick="filterCommits('all', this)">Todos</div>
+    <div class="cc-filter-tab" data-filter="feat"        onclick="filterCommits('feat', this)">✨ Features</div>
+    <div class="cc-filter-tab" data-filter="fix"         onclick="filterCommits('fix', this)">🐛 Fixes</div>
+    <div class="cc-filter-tab" data-filter="docs"        onclick="filterCommits('docs', this)">📝 Docs</div>
+    <div class="cc-filter-tab" data-filter="style"       onclick="filterCommits('style', this)">💄 Estilos</div>
+    <div class="cc-filter-tab" data-filter="refactor"    onclick="filterCommits('refactor', this)">♻️ Refactor</div>
+    <div class="cc-filter-tab" data-filter="perf"        onclick="filterCommits('perf', this)">⚡ Perf</div>
+    <div class="cc-filter-tab" data-filter="ci"          onclick="filterCommits('ci', this)">👷 CI/CD</div>
+    <div class="cc-filter-tab" data-filter="chore"       onclick="filterCommits('chore', this)">🔧 Chore</div>
+    <div class="cc-filter-tab" data-filter="revert"      onclick="filterCommits('revert', this)">↩️ Reverts</div>
 </div>
 
 <!-- Commit Timeline -->
@@ -388,13 +567,27 @@
             </div>
             <div class="cc-commit-msg">
                 {% if commit.prefix_type == 'feat' %}
-                    <span class="cc-prefix cc-prefix-feat">FEATURE</span>
+                    <span class="cc-prefix cc-prefix-feat">✨ FEATURE</span>
                 {% elif commit.prefix_type == 'fix' %}
-                    <span class="cc-prefix cc-prefix-fix">FIX</span>
-                {% elif commit.prefix_type == 'ci' or commit.prefix_type == 'config' %}
-                    <span class="cc-prefix cc-prefix-ci">CONFIG</span>
+                    <span class="cc-prefix cc-prefix-fix">🐛 FIX</span>
+                {% elif commit.prefix_type == 'docs' %}
+                    <span class="cc-prefix cc-prefix-docs">📝 DOCS</span>
+                {% elif commit.prefix_type == 'style' %}
+                    <span class="cc-prefix cc-prefix-style">💄 STYLE</span>
+                {% elif commit.prefix_type == 'refactor' %}
+                    <span class="cc-prefix cc-prefix-refactor">♻️ REFACTOR</span>
+                {% elif commit.prefix_type == 'perf' %}
+                    <span class="cc-prefix cc-prefix-perf">⚡ PERF</span>
+                {% elif commit.prefix_type == 'test' %}
+                    <span class="cc-prefix cc-prefix-test">✅ TEST</span>
+                {% elif commit.prefix_type == 'ci' %}
+                    <span class="cc-prefix cc-prefix-ci">👷 CI/CD</span>
+                {% elif commit.prefix_type == 'chore' %}
+                    <span class="cc-prefix cc-prefix-chore">🔧 CHORE</span>
+                {% elif commit.prefix_type == 'revert' %}
+                    <span class="cc-prefix cc-prefix-revert">↩️ REVERT</span>
                 {% else %}
-                    <span class="cc-prefix cc-prefix-other">UPDATE</span>
+                    <span class="cc-prefix cc-prefix-other">📌 UPDATE</span>
                 {% endif %}
                 {{ commit.message }}
             </div>

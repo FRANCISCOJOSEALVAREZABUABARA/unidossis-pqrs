@@ -168,6 +168,36 @@
         <!-- Columna derecha: gestor -->
         {% if perfil.rol != 'cliente' %}
         <div>
+            {% if perfil.rol == 'agente' and not es_agente_asignado %}
+            <!-- MODO SOLO CONSULTA: el agente no está asignado a este ticket -->
+            <div style="background:linear-gradient(135deg, #fefce8, #fef9c3); border:2px solid #fde047; border-radius:16px; padding:20px 24px; margin-bottom:20px;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                    <i class="fa-solid fa-eye" style="font-size:22px; color:#ca8a04;"></i>
+                    <div>
+                        <div style="font-size:14px; font-weight:800; color:#92400e;">Modo Solo Consulta</div>
+                        <div style="font-size:11.5px; color:#a16207; margin-top:2px;">Este ticket no te está asignado. Puedes verlo pero no modificarlo.</div>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;">
+                    <div style="background:#fff7ed; border-radius:10px; padding:12px;">
+                        <div style="font-size:10px; font-weight:700; color:#9a3412; text-transform:uppercase; margin-bottom:4px;">Estado actual</div>
+                        <div style="font-size:13px; font-weight:600; color:#1e293b;">{{ ticket.get_estado_display }}</div>
+                    </div>
+                    <div style="background:#fff7ed; border-radius:10px; padding:12px;">
+                        <div style="font-size:10px; font-weight:700; color:#9a3412; text-transform:uppercase; margin-bottom:4px;">Responsable</div>
+                        <div style="font-size:13px; font-weight:600; color:#1e293b;">{{ ticket.responsable|default:"Sin asignar" }}</div>
+                    </div>
+                    <div style="background:#fff7ed; border-radius:10px; padding:12px;">
+                        <div style="font-size:10px; font-weight:700; color:#9a3412; text-transform:uppercase; margin-bottom:4px;">Regional</div>
+                        <div style="font-size:13px; font-weight:600; color:#1e293b;">{{ ticket.get_regional_display|default:"Sin asignar" }}</div>
+                    </div>
+                    <div style="background:#fff7ed; border-radius:10px; padding:12px;">
+                        <div style="font-size:10px; font-weight:700; color:#9a3412; text-transform:uppercase; margin-bottom:4px;">SLA</div>
+                        <div style="font-size:13px; font-weight:600; color:#1e293b;">{{ ticket.dias_transcurridos }} día{{ ticket.dias_transcurridos|pluralize }}</div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
             <div class="management-panel">
                 <div class="panel-title"><i class="fa-solid fa-sliders"></i> Gestión del Caso</div>
                 <form method="POST" enctype="multipart/form-data" id="management-form">
@@ -211,7 +241,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' or perfil.rol == 'supervisor' %}
+                    {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' or perfil.rol == 'agente' %}
                     <div class="form-group">
                         <label><i class="fa-solid fa-map-location-dot" style="color:var(--accent); margin-right:4px;"></i> Regional Asignada</label>
                         <select name="regional" class="form-control">
@@ -224,6 +254,7 @@
                     {% endif %}
 
                     <!-- ═══ SECCIÓN 1: RESPUESTA OFICIAL AL CLIENTE ═══ -->
+                    {% if perfil.rol != 'agente' %}
                     <div style="margin-top:20px; border-top:2px solid var(--border); padding-top:18px;">
                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
                             <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #dbeafe, #eff6ff); border:1.5px solid #bfdbfe; display:flex; align-items:center; justify-content:center;">
@@ -255,6 +286,7 @@
                         </div>
                         {% endif %}
                     </div>
+                    {% endif %} {# fin bloque respuesta oficial #}
 
                     <!-- ═══ SECCIÓN 2: SOPORTES Y EVIDENCIAS INTERNAS ═══ -->
                     <div style="margin-top:20px; border-top:2px solid var(--border); padding-top:18px;">
@@ -290,12 +322,15 @@
                         <button type="submit" class="btn-save">
                             <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
                         </button>
+                        {% if perfil.rol != 'agente' %}
                         <button type="submit" name="cerrar_y_enviar" class="btn-close-ticket" onclick="return confirm('¿Confirma el cierre de este caso? Se enviará la respuesta y encuesta CSAT al cliente.')">
                             <i class="fa-solid fa-check-circle"></i> Cerrar y Notificar al Cliente
                         </button>
+                        {% endif %}
                     </div>
                 </form>
             </div>
+            {% endif %} {# fin bloque agente-asignado #}
         </div>
         {% endif %}
     </div>

@@ -141,6 +141,93 @@ def analizar_ticket_con_ia(asunto, descripcion):
     }
 
 
+def generar_resumen_cliente(asunto, cuerpo):
+    """
+    Genera un resumen completo orientado al cliente institucional.
+    Extrae las oraciones más informativas del cuerpo, omitiendo saludos y cierres.
+    Siempre retorna un string (nunca None). Intenta Gemini si hay cuota disponible.
+    """
+    import re
+
+    # ── 1. Intentar con IA si está disponible ──────────────────────────────
+    if API_URL:
+        prompt = (
+            "Eres un asistente de atención al cliente de Unidossis.\n"
+            "Genera un RESUMEN COMPLETO pero conciso (máximo 3 oraciones, ≤350 caracteres) "
+            "del siguiente caso PQRS. Captura el problema principal, cuándo ocurrió y qué se solicita.\n"
+            "Usa lenguaje claro. NO empieces con saludos. NO uses jerga técnica interna.\n"
+            "Devuelve SOLO el resumen, sin comillas ni prefijos.\n\n"
+            f"Asunto: {asunto}\nDescripción: {cuerpo[:800]}"
+        )
+        try:
+            texto = llamar_gemini(prompt, temperature=0.25)
+            if texto:
+                return texto.strip().replace('"', '').replace("'", '')[:380]
+        except Exception:
+            pass
+
+    # ── 2. Extractive summarization local ────────────────────────────────
+    # Patrones de líneas a OMITIR (saludos, cierres, datos aislados)
+    OMITIR = re.compile(
+        r'^('
+        r'buenas\s+(tardes|noches|d[ií]as)|hola\b|cordial\s+saludo|estimad[ao]s?|'
+        r'por\s+medio\s+del?\s+presente|a\s+quien\s+corresponda|señor|'
+        r'de\s+manera\s+atenta|mediante\s+el\s+presente|apreciado|'
+        r'agradezco|quedo\s+atenta?|cordialmente|atentamente|saludos|'
+        r'sin\s+otro\s+particular|en\s+espera\s+de|esperamos\s+pronta|'
+        r'gracias|adjunto|quedo\s+en\s+espera|para\s+mayor\s+informaci[oó]n|'
+        r'\*+|\-+|_{3,}'
+        r')',
+        re.IGNORECASE
+    )
+
+    # Normalizar saltos de línea múltiples y limpiar
+    texto = re.sub(r'\r\n|\r', '\n', cuerpo.strip())
+    texto = re.sub(r'\n{3,}', '\n\n', texto)
+
+    # Dividir por oraciones (punto/excl/interrogación seguido de espacio o salto)
+    raw_oraciones = re.split(r'(?<=[.!?])\s+|\n+', texto)
+
+    utiles = []
+    chars = 0
+    LIMITE = 370
+
+    for o in raw_oraciones:
+        o = o.strip().strip('"').strip("'")
+        # Descartar cortas, saludos/cierres, urls
+        if len(o) < 25:
+            continue
+        if OMITIR.match(o):
+            continue
+        if 'http' in o.lower() or re.match(r'^[\w\.-]+@', o):
+            continue
+        # Descartar líneas que sean solo números/fechas/datos de cabecera
+        if re.match(r'^[\d\s:/\-,\.]+$', o):
+            continue
+
+        # Agregar oración si cabe dentro del límite
+        espacio = len(o) + (2 if utiles else 0)
+        if chars + espacio <= LIMITE:
+            utiles.append(o)
+            chars += espacio
+        elif not utiles:
+            # Al menos incluir el inicio de la primera oración útil
+            utiles.append(o[:LIMITE - 3] + '…')
+            break
+        else:
+            break
+
+    if not utiles:
+        # Fallback: tomar el inicio del cuerpo quitando saludo inicial
+        limpio = OMITIR.sub('', texto).strip()
+        return (limpio[:350] + '…') if len(limpio) > 350 else limpio
+
+    resumen = ' '.join(utiles)
+    if len(resumen) > 380:
+        resumen = resumen[:377] + '…'
+    return resumen
+
+
 def reclasificar_ticket_con_ia(ticket):
     """
     Reclasifica un ticket existente usando el motor IA con aprendizaje.

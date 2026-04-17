@@ -16,7 +16,7 @@ from .models import (
     PerfilUsuario, ConfiguracionSLA, AlertaSLA, LogActividad,
     ComentarioTicket, EncuestaSatisfaccion, FeedbackIA, IntentoLogin
 )
-from .ia_engine import analizar_ticket_con_ia, conversar_con_analista_ia, reclasificar_ticket_con_ia
+from .ia_engine import analizar_ticket_con_ia, conversar_con_analista_ia, reclasificar_ticket_con_ia, generar_resumen_cliente
 
 
 # ─────────────────────────────────────────────────────────────
@@ -51,6 +51,10 @@ def rol_requerido(*roles):
                 return render(request, 'tickets/acceso_denegado.html', {
                     'mensaje': 'Su usuario no tiene un perfil configurado. Contacte al administrador.'
                 }, status=403)
+
+            # Si hay simulación activa, el usuario real es superadmin → permitir siempre
+            if getattr(request, 'simulacion_activa', False):
+                return view_func(request, *args, **kwargs)
 
             if request.user.perfil.rol not in roles and 'superadmin' not in [request.user.perfil.rol]:
                 return render(request, 'tickets/acceso_denegado.html', {
@@ -194,26 +198,22 @@ def cambiar_password_view(request):
 # ─────────────────────────────────────────────────────────────
 
 @login_required
-@rol_requerido('superadmin', 'admin_pqrs', 'director_regional', 'supervisor')
+@rol_requerido('superadmin', 'admin_pqrs', 'director_regional', 'agente')
 def dashboard_view(request):
     perfil = request.user.perfil
 
     # Base query según rol
-    if perfil.rol in ['superadmin', 'admin_pqrs']:
+    if perfil.rol in ['superadmin', 'admin_pqrs', 'agente']:
         tickets_query = Ticket.objects.all()
     elif perfil.rol == 'director_regional':
-        tickets_query = Ticket.objects.filter(regional=perfil.regional)
-    elif perfil.rol == 'supervisor':
-        # Buscar por username, nombre completo o apellido del supervisor
-        nombre_completo = request.user.get_full_name()
-        filtro_supervisor = Q(responsable__icontains=request.user.username)
-        if nombre_completo:
-            filtro_supervisor |= Q(responsable__icontains=nombre_completo)
-        if request.user.last_name:
-            filtro_supervisor |= Q(responsable__icontains=request.user.last_name)
-        if request.user.first_name:
-            filtro_supervisor |= Q(responsable__icontains=request.user.first_name)
-        tickets_query = Ticket.objects.filter(filtro_supervisor)
+        # En simulación: si no se eligió regional específica, mostrar todos (modo preview)
+        if perfil.regional:
+            tickets_query = Ticket.objects.filter(regional=perfil.regional)
+        else:
+            tickets_query = Ticket.objects.all()
+    else:
+        # Fallback seguro para cualquier otro rol o estado inesperado
+        tickets_query = Ticket.objects.all()
 
     # Filtro por cliente (Para Inteligencia Analítica y buscador inteligente)
     cliente_id = request.GET.get('cliente_id')
@@ -330,10 +330,22 @@ def dashboard_view(request):
 # ─────────────────────────────────────────────────────────────
 
 @login_required
-@rol_requerido('superadmin', 'admin_pqrs', 'director_regional', 'supervisor', 'cliente')
+@rol_requerido('superadmin', 'admin_pqrs', 'director_regional', 'agente', 'cliente')
 def ticket_detail_view(request, ticket_id):
     ticket = get_object_or_404(Ticket, ticket_id=ticket_id)
     perfil = request.user.perfil
+
+    # Calcular si el agente está asignado a este ticket (su nombre aparece en 'responsable')
+    es_agente_asignado = False
+    if perfil.rol == 'agente':
+        responsable_str = (ticket.responsable or "").lower()
+        nombre_usuario = request.user.get_full_name().lower() if request.user.get_full_name() else ""
+        es_agente_asignado = (
+            request.user.username.lower() in responsable_str or
+            (nombre_usuario and nombre_usuario in responsable_str) or
+            (request.user.last_name and request.user.last_name.lower() in responsable_str) or
+            (request.user.first_name and request.user.first_name.lower() in responsable_str)
+        )
 
     # Validaciones de seguridad por rol
     if perfil.rol == 'cliente':
@@ -341,15 +353,6 @@ def ticket_detail_view(request, ticket_id):
             return redirect('acceso_denegado')
     elif perfil.rol == 'director_regional':
         if ticket.regional != perfil.regional:
-            return redirect('acceso_denegado')
-    elif perfil.rol == 'supervisor':
-        responsable_str = (ticket.responsable or "").lower()
-        puede_ver = (
-            request.user.username.lower() in responsable_str or
-            (request.user.get_full_name() and request.user.get_full_name().lower() in responsable_str) or
-            (request.user.last_name and request.user.last_name.lower() in responsable_str)
-        )
-        if not puede_ver and not request.user.is_superuser:
             return redirect('acceso_denegado')
 
     adjuntos_cliente = ticket.archivos_adjuntos.filter(es_respuesta_agente=False, es_soporte_interno=False)
@@ -359,6 +362,9 @@ def ticket_detail_view(request, ticket_id):
     logs = ticket.logs.all()[:20]
 
     if request.method == 'POST' and perfil.rol != 'cliente':
+        # Los agentes solo pueden hacer POST si están asignados al ticket
+        if perfil.rol == 'agente' and not es_agente_asignado:
+            return redirect('ticket_detail', ticket_id=ticket.ticket_id)
         estado_anterior = ticket.estado
         nuevo_estado = request.POST.get('nuevo_estado')
         respuesta_texto = request.POST.get('respuesta_oficial')
@@ -377,8 +383,8 @@ def ticket_detail_view(request, ticket_id):
         if tipificacion: ticket.tipificacion = tipificacion
         if criticidad: ticket.criticidad = criticidad
 
-        # Regional: solo superadmin y admin_pqrs pueden cambiarla
-        if regional is not None and perfil.rol in ('superadmin', 'admin_pqrs', 'supervisor'):
+        # Regional: superadmin, admin_pqrs y agentes asignados pueden cambiarla
+        if regional is not None and perfil.rol in ('superadmin', 'admin_pqrs', 'agente'):
             regional_anterior = ticket.regional
             ticket.regional = regional
             if regional != regional_anterior:
@@ -391,7 +397,7 @@ def ticket_detail_view(request, ticket_id):
         responsable_manual = request.POST.get('responsable')
         if responsable_manual: ticket.responsable = responsable_manual
 
-        if respuesta_texto is not None:
+        if respuesta_texto is not None and perfil.rol != 'agente':
             ticket.respuesta_oficial = respuesta_texto
 
         ticket.save()
@@ -424,8 +430,8 @@ def ticket_detail_view(request, ticket_id):
                     subido_por_sistema=False
                 )
 
-        # Cerrar y enviar respuesta formal + CSAT
-        if 'cerrar_y_enviar' in request.POST:
+        # Cerrar y enviar respuesta formal + CSAT (no permitido para agentes)
+        if 'cerrar_y_enviar' in request.POST and perfil.rol != 'agente':
             ticket.estado = 'resuelto'
             ticket.save()
             _enviar_respuesta_formal_y_csat(ticket, request)
@@ -452,6 +458,7 @@ def ticket_detail_view(request, ticket_id):
         'perfil': perfil,
         'nav_active': 'dashboard',
         'cliente': perfil.cliente if perfil.rol == 'cliente' else None,
+        'es_agente_asignado': es_agente_asignado,  # Pasado al template para controlar edición
     })
 
 
@@ -462,12 +469,25 @@ def ticket_detail_view(request, ticket_id):
 @login_required
 @rol_requerido('cliente')
 def public_pqrs_view(request):
-    perfil_cliente = getattr(request.user, 'cliente_perfil', None)
+    # ── Si hay simulación activa de cliente, usar el mock del middleware ──
+    if getattr(request, 'simulacion_activa', False) and getattr(request, 'cliente_simulado', None):
+        perfil_cliente = request.cliente_simulado
+    else:
+        perfil_cliente = getattr(request.user, 'cliente_perfil', None)
 
-    if perfil_cliente and not perfil_cliente.activo:
+    simulacion_activa = getattr(request, 'simulacion_activa', False)
+
+    if perfil_cliente and not perfil_cliente.activo and not simulacion_activa:
         return render(request, 'tickets/acceso_denegado.html', {
             'mensaje': 'Su cuenta institucional se encuentra inactiva. Comuníquese con el equipo de Unidossis para más información.'
         }, status=403)
+
+    ctx_base = {
+        'TIPO_CHOICES': Ticket.TIPO_SOLICITUD_CHOICES,
+        'perfil_cliente': perfil_cliente,
+        'simulacion_activa': simulacion_activa,
+        'rol_simulado': getattr(request, 'rol_simulado', None),
+    }
 
     if request.method == 'POST':
         institucion = request.POST.get('institucion')
@@ -482,10 +502,20 @@ def public_pqrs_view(request):
         descripcion = request.POST.get('descripcion')
 
         if not (institucion and nombre and email and asunto and descripcion):
-            return render(request, 'tickets/portal_form.html', {
-                'TIPO_CHOICES': Ticket.TIPO_SOLICITUD_CHOICES,
-                'perfil_cliente': perfil_cliente,
-                'error': 'Por favor, complete todos los campos obligatorios (Institución, Nombre, Correo, Asunto y Descripción).'
+            ctx_base['error'] = 'Por favor, complete todos los campos obligatorios (Institución, Nombre, Correo, Asunto y Descripción).'
+            return render(request, 'tickets/portal_form.html', ctx_base)
+
+        # En simulación no se crea ticket real, solo se muestra éxito
+        if simulacion_activa:
+            from types import SimpleNamespace
+            ticket_fake = SimpleNamespace(
+                ticket_id='SIM-PREVIEW',
+                remitente_email=email,
+                asunto=asunto,
+            )
+            return render(request, 'tickets/portal_success.html', {
+                'ticket': ticket_fake,
+                'simulacion_activa': True,
             })
 
         # Procesamiento por IA
@@ -524,13 +554,9 @@ def public_pqrs_view(request):
             detalle=f'Clasificado por IA: {analisis["tipificacion"]} / {analisis["criticidad"]}'
         )
 
-        # El portal de clientes NO envía acuse de recibo (solo correos externos)
         return render(request, 'tickets/portal_success.html', {'ticket': nuevo_ticket})
 
-    return render(request, 'tickets/portal_form.html', {
-        'TIPO_CHOICES': Ticket.TIPO_SOLICITUD_CHOICES,
-        'perfil_cliente': perfil_cliente
-    })
+    return render(request, 'tickets/portal_form.html', ctx_base)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -594,13 +620,10 @@ def login_view(request):
 
                 if perfil.rol == 'cliente':
                     return redirect('portal_cliente_dashboard')
-                elif perfil.rol in ['superadmin', 'admin_pqrs']:
-                    return redirect('gestionar_clientes')
                 else:
+                    # Superadmin, admin, director, agente → siempre al dashboard
                     return redirect('dashboard')
             except PerfilUsuario.DoesNotExist:
-                if user.is_superuser:
-                    return redirect('gestionar_clientes')
                 return redirect('dashboard')
         else:
             # Registrar intento fallido
@@ -863,13 +886,13 @@ def gestionar_clientes_view(request):
 
     # Usuarios internos (excluye clientes y superadmins)
     usuarios_internos = PerfilUsuario.objects.filter(
-        rol__in=['admin_pqrs', 'director_regional', 'supervisor']
+        rol__in=['admin_pqrs', 'director_regional', 'agente']
     ).select_related('user').order_by('user__first_name')
 
     ROL_CHOICES_INTERNOS = [
         ('admin_pqrs', 'Administrador PQRS'),
         ('director_regional', 'Director Regional'),
-        ('supervisor', 'Supervisor'),
+        ('agente', 'Agente / Consultor'),
     ]
 
     tab_activa = request.POST.get('_tab', request.GET.get('tab', 'clientes'))
@@ -895,27 +918,135 @@ def gestionar_clientes_view(request):
 @rol_requerido('cliente')
 def portal_cliente_dashboard(request):
     """Dashboard para que el cliente vea sus propios tickets."""
+    from django.db.models import Count
+    from django.utils import timezone
+    import json as _json
+
     perfil = request.user.perfil
-    cliente = perfil.cliente
+
+    # ── En modo simulación, usar el cliente inyectado por el middleware ──
+    simulacion_activa = getattr(request, 'simulacion_activa', False)
+    if simulacion_activa and getattr(request, 'cliente_simulado', None):
+        cliente = request.cliente_simulado
+    else:
+        cliente = perfil.cliente
 
     if not cliente:
         return render(request, 'tickets/acceso_denegado.html', {
             'mensaje': 'Su usuario no está vinculado a ninguna institución clínica.'
         })
 
-    tickets = Ticket.objects.filter(cliente_rel=cliente).order_by('-fecha_ingreso')
-    tickets_en_proceso = tickets.exclude(estado__in=['resuelto', 'cancelado']).count()
-    tickets_resueltos = tickets.filter(estado='resuelto').count()
-    total_tickets = tickets.count()
+    tickets_qs = Ticket.objects.filter(cliente_rel=cliente).order_by('-fecha_ingreso')
+
+    # ── KPIs principales ──
+    total_tickets       = tickets_qs.count()
+    tickets_resueltos   = tickets_qs.filter(estado='resuelto').count()
+    tickets_cancelados  = tickets_qs.filter(estado='cancelado').count()
+    tickets_en_proceso  = tickets_qs.exclude(estado__in=['resuelto', 'cancelado']).count()
+
+    # Vencidos SLA: abiertos con más de 14 días
+    limite_sla = timezone.now() - timezone.timedelta(days=14)
+    tickets_vencidos_sla = tickets_qs.exclude(
+        estado__in=['resuelto', 'cancelado']
+    ).filter(fecha_ingreso__lt=limite_sla).count()
+
+    pct_cumplimiento = round((tickets_resueltos / total_tickets * 100), 1) if total_tickets else 0
+    pct_en_proceso   = round((tickets_en_proceso / total_tickets * 100), 1) if total_tickets else 0
+
+    # ── Por Tipo de Solicitud ──
+    tipo_labels_map = dict(Ticket.TIPO_SOLICITUD_CHOICES)
+    por_tipo_qs = (
+        tickets_qs.values('tipo_solicitud')
+        .annotate(cnt=Count('id'))
+        .order_by('-cnt')
+    )
+    por_tipo = [
+        {'key': r['tipo_solicitud'], 'label': tipo_labels_map.get(r['tipo_solicitud'], r['tipo_solicitud']), 'cnt': r['cnt']}
+        for r in por_tipo_qs
+    ]
+
+    # ── Por Línea de Servicio (Top 6) ──
+    linea_labels_map = dict(Ticket.LINEA_CHOICES)
+    por_linea_qs = (
+        tickets_qs.exclude(linea_servicio__isnull=True)
+        .values('linea_servicio')
+        .annotate(cnt=Count('id'))
+        .order_by('-cnt')[:6]
+    )
+    por_linea = [
+        {'key': r['linea_servicio'], 'label': linea_labels_map.get(r['linea_servicio'], r['linea_servicio']), 'cnt': r['cnt']}
+        for r in por_linea_qs
+    ]
+
+    # ── Por Criticidad ──
+    crit_labels_map = {'critica': 'Crítica', 'mayor': 'Mayor', 'menor': 'Menor', 'informativa': 'Informativa'}
+    crit_colors = {'critica': '#ef4444', 'mayor': '#f97316', 'menor': '#eab308', 'informativa': '#22c55e'}
+    por_criticidad_qs = (
+        tickets_qs.exclude(criticidad__isnull=True)
+        .values('criticidad')
+        .annotate(cnt=Count('id'))
+        .order_by('-cnt')
+    )
+    por_criticidad = [
+        {'key': r['criticidad'], 'label': crit_labels_map.get(r['criticidad'], r['criticidad']),
+         'cnt': r['cnt'], 'color': crit_colors.get(r['criticidad'], '#6366f1')}
+        for r in por_criticidad_qs
+    ]
+
+    # ── Tendencia mensual (últimos 6 meses) ──
+    hoy = timezone.now()
+    tendencia = []
+    for i in range(5, -1, -1):
+        mes_inicio = (hoy - timezone.timedelta(days=30 * i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        mes_fin = (mes_inicio + timezone.timedelta(days=32)).replace(day=1)
+        cnt = tickets_qs.filter(fecha_ingreso__gte=mes_inicio, fecha_ingreso__lt=mes_fin).count()
+        tendencia.append({'mes': mes_inicio.strftime('%b %Y'), 'cnt': cnt})
+
+    # ── Serializar datos para Chart.js ──
+    chart_tipo   = _json.dumps({'labels': [t['label'] for t in por_tipo],   'data': [t['cnt'] for t in por_tipo]})
+    chart_linea  = _json.dumps({'labels': [l['label'] for l in por_linea],  'data': [l['cnt'] for l in por_linea]})
+    chart_trend  = _json.dumps({'labels': [t['mes'] for t in tendencia],    'data': [t['cnt'] for t in tendencia]})
+
+    # ── Últimos 8 tickets para tabla ──
+    tickets_recientes = list(tickets_qs[:8])
+
+    # ── Lazy backfill de resumen IA (máx 5 por carga, corre siempre) ──
+    sin_resumen = [t for t in tickets_recientes if not t.resumen_cliente_ia and t.cuerpo][:5]
+    for t in sin_resumen:
+        try:
+            resumen = generar_resumen_cliente(t.asunto, t.cuerpo)
+            if resumen:
+                Ticket.objects.filter(pk=t.pk).update(resumen_cliente_ia=resumen)
+                t.resumen_cliente_ia = resumen
+        except Exception:
+            pass
 
     return render(request, 'tickets/cliente/dashboard.html', {
         'cliente': cliente,
-        'tickets': tickets,
-        'tickets_en_proceso': tickets_en_proceso,
-        'tickets_resueltos': tickets_resueltos,
+        'tickets': tickets_recientes,
+        'tickets_todos': tickets_qs,
+        # KPIs
         'total_tickets': total_tickets,
+        'tickets_resueltos': tickets_resueltos,
+        'tickets_en_proceso': tickets_en_proceso,
+        'tickets_cancelados': tickets_cancelados,
+        'tickets_vencidos_sla': tickets_vencidos_sla,
+        'pct_cumplimiento': pct_cumplimiento,
+        'pct_en_proceso': pct_en_proceso,
+        # Analytics
+        'por_tipo': por_tipo,
+        'por_linea': por_linea,
+        'por_criticidad': por_criticidad,
+        # Charts JSON
+        'chart_tipo': chart_tipo,
+        'chart_linea': chart_linea,
+        'chart_trend': chart_trend,
+        # Nav
         'nav_active': 'mis_pqrs',
+        'simulacion_activa': simulacion_activa,
+        'rol_simulado': getattr(request, 'rol_simulado', None),
     })
+
 
 
 # ─────────────────────────────────────────────────────────────
@@ -927,6 +1058,99 @@ def acceso_denegado_view(request):
     mensaje = request.GET.get('mensaje', 'No tiene permisos para acceder a esta sección.')
     return render(request, 'tickets/acceso_denegado.html', {'mensaje': mensaje})
 
+
+# ─────────────────────────────────────────────────────────────
+# PORTAL CLIENTE: ANALÍTICAS
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+@rol_requerido('cliente')
+def portal_cliente_analytics(request):
+    """Página de analíticas e indicadores para el portal cliente."""
+    from django.db.models import Count
+    from django.utils import timezone
+    import json as _json
+
+    perfil = request.user.perfil
+    simulacion_activa = getattr(request, 'simulacion_activa', False)
+    if simulacion_activa and getattr(request, 'cliente_simulado', None):
+        cliente = request.cliente_simulado
+    else:
+        cliente = perfil.cliente
+
+    if not cliente:
+        return render(request, 'tickets/acceso_denegado.html', {
+            'mensaje': 'Su usuario no está vinculado a ninguna institución clínica.'
+        })
+
+    tickets_qs = Ticket.objects.filter(cliente_rel=cliente)
+    total_tickets = tickets_qs.count()
+    tickets_resueltos = tickets_qs.filter(estado='resuelto').count()
+    pct_cumplimiento = round((tickets_resueltos / total_tickets * 100), 1) if total_tickets else 0
+
+    # Por Tipo
+    tipo_labels_map = dict(Ticket.TIPO_SOLICITUD_CHOICES)
+    por_tipo = [
+        {'label': tipo_labels_map.get(r['tipo_solicitud'], r['tipo_solicitud']), 'cnt': r['cnt']}
+        for r in tickets_qs.values('tipo_solicitud').annotate(cnt=Count('id')).order_by('-cnt')
+    ]
+
+    # Por Línea (Top 6)
+    linea_labels_map = dict(Ticket.LINEA_CHOICES)
+    por_linea = [
+        {'label': linea_labels_map.get(r['linea_servicio'], r['linea_servicio']), 'cnt': r['cnt']}
+        for r in tickets_qs.exclude(linea_servicio__isnull=True)
+            .values('linea_servicio').annotate(cnt=Count('id')).order_by('-cnt')[:6]
+    ]
+
+    # Por Criticidad
+    crit_labels_map = {'critica': 'Crítica', 'mayor': 'Mayor', 'menor': 'Menor', 'informativa': 'Informativa'}
+    crit_colors = {'critica': '#ef4444', 'mayor': '#f97316', 'menor': '#eab308', 'informativa': '#22c55e'}
+    por_criticidad = [
+        {'label': crit_labels_map.get(r['criticidad'], r['criticidad']),
+         'cnt': r['cnt'], 'color': crit_colors.get(r['criticidad'], '#6366f1')}
+        for r in tickets_qs.exclude(criticidad__isnull=True)
+            .values('criticidad').annotate(cnt=Count('id')).order_by('-cnt')
+    ]
+
+    # Por Estado
+    estado_labels = {'abierto': 'Abierto', 'revision': 'En Revisión', 'resuelto': 'Resuelto', 'cancelado': 'Cancelado'}
+    por_estado = [
+        {'label': estado_labels.get(r['estado'], r['estado']), 'cnt': r['cnt']}
+        for r in tickets_qs.values('estado').annotate(cnt=Count('id')).order_by('-cnt')
+    ]
+
+    # Tendencia mensual (6 meses)
+    hoy = timezone.now()
+    tendencia = []
+    for i in range(5, -1, -1):
+        mes_inicio = (hoy - timezone.timedelta(days=30 * i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        mes_fin = (mes_inicio + timezone.timedelta(days=32)).replace(day=1)
+        cnt = tickets_qs.filter(fecha_ingreso__gte=mes_inicio, fecha_ingreso__lt=mes_fin).count()
+        tendencia.append({'mes': mes_inicio.strftime('%b %Y'), 'cnt': cnt})
+
+    chart_tipo   = _json.dumps({'labels': [t['label'] for t in por_tipo],  'data': [t['cnt'] for t in por_tipo]})
+    chart_linea  = _json.dumps({'labels': [l['label'] for l in por_linea], 'data': [l['cnt'] for l in por_linea]})
+    chart_trend  = _json.dumps({'labels': [t['mes'] for t in tendencia],   'data': [t['cnt'] for t in tendencia]})
+    chart_estado = _json.dumps({'labels': [e['label'] for e in por_estado],'data': [e['cnt'] for e in por_estado]})
+
+    return render(request, 'tickets/cliente/analytics.html', {
+        'cliente': cliente,
+        'total_tickets': total_tickets,
+        'tickets_resueltos': tickets_resueltos,
+        'pct_cumplimiento': pct_cumplimiento,
+        'por_tipo': por_tipo,
+        'por_linea': por_linea,
+        'por_criticidad': por_criticidad,
+        'por_estado': por_estado,
+        'chart_tipo': chart_tipo,
+        'chart_linea': chart_linea,
+        'chart_trend': chart_trend,
+        'chart_estado': chart_estado,
+        'nav_active': 'analiticas',
+        'simulacion_activa': simulacion_activa,
+        'rol_simulado': getattr(request, 'rol_simulado', None),
+    })
 
 # ─────────────────────────────────────────────────────────────
 # APIs AJAX
@@ -1906,15 +2130,29 @@ def control_cambios_view(request):
         parts = line.split('||')
         if len(parts) >= 5:
             msg = parts[4]
-            # Detectar tipo de commit por prefijo convencional
+            # Detectar tipo de commit por prefijo convencional (Conventional Commits spec)
             prefix_type = 'other'
-            msg_lower = msg.lower()
+            msg_lower = msg.lower().strip()
             if msg_lower.startswith('feat') or '✨' in msg:
                 prefix_type = 'feat'
             elif msg_lower.startswith('fix') or '🐛' in msg or 'fix:' in msg_lower:
                 prefix_type = 'fix'
-            elif msg_lower.startswith('ci') or msg_lower.startswith('config') or msg_lower.startswith('chore'):
+            elif msg_lower.startswith('docs') or '📝' in msg:
+                prefix_type = 'docs'
+            elif msg_lower.startswith('style') or '💄' in msg:
+                prefix_type = 'style'
+            elif msg_lower.startswith('refactor') or '♻️' in msg:
+                prefix_type = 'refactor'
+            elif msg_lower.startswith('perf') or '⚡' in msg:
+                prefix_type = 'perf'
+            elif msg_lower.startswith('test') or '✅' in msg:
+                prefix_type = 'test'
+            elif msg_lower.startswith(('ci', 'build', 'config')) or '👷' in msg:
                 prefix_type = 'ci'
+            elif msg_lower.startswith('chore') or '🔧' in msg:
+                prefix_type = 'chore'
+            elif msg_lower.startswith('revert'):
+                prefix_type = 'revert'
 
             commits.append({
                 'hash': parts[0],
@@ -1957,6 +2195,54 @@ def control_cambios_view(request):
     # Fecha del último commit
     ultimo_commit_fecha = commits[0]['date'].split(' ')[0] if commits else 'N/A'
 
+    # ── Versión actual del proyecto ──────────────────────────
+    version_actual = 'v1.0.0'
+    try:
+        from tickets import __version__
+        version_actual = f'v{__version__}'
+    except Exception:
+        pass
+
+    # ── Leer CHANGELOG.md (primeras secciones) ──────────────
+    changelog_preview = ''
+    changelog_path = repo_dir / 'CHANGELOG.md'
+    if changelog_path.exists():
+        try:
+            with open(changelog_path, 'r', encoding='utf-8') as f:
+                changelog_preview = f.read(3000)  # Primeras 3000 chars
+        except Exception:
+            changelog_preview = ''
+
+    # ── Releases/Tags del repositorio ───────────────────────
+    tags_output = run_git(['tag', '-l', '--sort=-version:refname', '--format=%(refname:short)|||%(creatordate:short)|||%(subject)'])
+    releases = []
+    for line in (tags_output.split('\n') if tags_output else []):
+        parts = line.split('|||')
+        if parts and parts[0].strip():
+            releases.append({
+                'tag': parts[0].strip(),
+                'fecha': parts[1].strip() if len(parts) > 1 else '',
+                'descripcion': parts[2].strip() if len(parts) > 2 else '',
+            })
+
+    # ── Estado del último CI run (desde GitHub Actions API) ─
+    # Leemos el estado via requests a la API pública del repo
+    ci_status = 'unknown'
+    ci_url = 'https://github.com/FRANCISCOJOSEALVAREZABUABARA/unidossis-pqrs/actions'
+    try:
+        import urllib.request
+        api_url = 'https://api.github.com/repos/FRANCISCOJOSEALVAREZABUABARA/unidossis-pqrs/actions/runs?branch=main&per_page=1'
+        req = urllib.request.Request(api_url, headers={'User-Agent': 'UnidossisPQRS/1.0'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            import json as _json
+            data = _json.loads(resp.read())
+            if data.get('workflow_runs'):
+                run = data['workflow_runs'][0]
+                ci_status = run.get('conclusion') or run.get('status', 'unknown')
+                ci_url = run.get('html_url', ci_url)
+    except Exception:
+        pass  # No bloquear si GitHub no responde
+
     context = {
         'commits': commits,
         'total_commits': len(commits),
@@ -1965,6 +2251,11 @@ def control_cambios_view(request):
         'cambios_pendientes': cambios_pendientes,
         'archivos_modificados': archivos_modificados,
         'ultimo_commit_fecha': ultimo_commit_fecha,
+        'version_actual': version_actual,
+        'changelog_preview': changelog_preview,
+        'releases': releases,
+        'ci_status': ci_status,
+        'ci_url': ci_url,
         'perfil': request.user.perfil,
         'nav_active': 'control_cambios',
     }
@@ -2105,3 +2396,111 @@ def api_revertir_commit(request, commit_hash):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────
+# VIEW AS / ROLE IMPERSONATION (Solo superadmin)
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+def api_simular_rol(request):
+    """
+    Activa/desactiva la simulación de rol para el superadmin.
+
+    POST { "rol": "director_regional", "regional": "llanos" }
+    POST { "rol": "cliente", "cliente_id": 42 }
+    POST { "rol": "agente" }
+    POST { "rol": "" }  → desactiva
+    """
+    # Verificar que el usuario REAL es superadmin (no simulado)
+    perfil_real_rol = request.rol_original or request.user.perfil.rol
+    rol_real_session = request.session.get('_rol_real_superadmin', False)
+
+    if perfil_real_rol != 'superadmin' and not rol_real_session:
+        return JsonResponse({'ok': False, 'error': 'No autorizado.'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        data = {}
+
+    rol = data.get('rol', '').strip()
+    roles_validos = ['admin_pqrs', 'director_regional', 'agente', 'cliente']
+
+    if rol and rol in roles_validos:
+        request.session['simular_rol'] = rol
+        request.session['_rol_real_superadmin'] = True
+
+        # ── Guardar regional si es director_regional ──
+        if rol == 'director_regional':
+            regional = data.get('regional', '').strip()
+            request.session['simular_regional'] = regional
+
+        # ── Guardar cliente_id si es cliente ──
+        if rol == 'cliente':
+            cliente_id = data.get('cliente_id')
+            if cliente_id:
+                request.session['simular_cliente_id'] = cliente_id
+            else:
+                request.session.pop('simular_cliente_id', None)
+
+        # Determinar redirección
+        if rol == 'cliente':
+            redirect_url = '/cliente/dashboard/'
+        else:
+            redirect_url = '/dashboard/'
+
+        rol_labels = {
+            'admin_pqrs': 'Administrador PQRS',
+            'director_regional': 'Director Regional',
+            'agente': 'Agente / Consultor',
+            'cliente': 'Cliente Institución',
+        }
+
+        return JsonResponse({
+            'ok': True,
+            'activo': True,
+            'rol': rol,
+            'rol_display': rol_labels.get(rol, rol),
+            'redirect': redirect_url,
+        })
+
+    elif rol == '' or not rol:
+        # Desactivar simulación — limpiar todo
+        request.session.pop('simular_rol', None)
+        request.session.pop('simular_regional', None)
+        request.session.pop('simular_cliente_id', None)
+        request.session.pop('_rol_real_superadmin', None)
+        return JsonResponse({
+            'ok': True,
+            'activo': False,
+            'redirect': '/dashboard/',
+        })
+    else:
+        return JsonResponse({'ok': False, 'error': 'Rol no válido.'}, status=400)
+
+
+@login_required
+def api_simular_opciones(request):
+    """
+    Devuelve las opciones disponibles para sub-selects de simulación:
+    - Regionales disponibles (para director_regional)
+    - Clientes disponibles (para cliente)
+    Solo accesible por superadmin.
+    """
+    if request.user.perfil.rol != 'superadmin' and not request.session.get('_rol_real_superadmin'):
+        return JsonResponse({'ok': False}, status=403)
+
+    regionales = Ticket.REGIONAL_CHOICES
+
+    clientes = list(
+        Cliente.objects.filter(activo=True).values('id', 'nombre', 'regional')
+        .order_by('nombre')[:80]
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'regionales': [{'key': k, 'label': v} for k, v in regionales],
+        'clientes': clientes,
+    })
+

@@ -2,9 +2,203 @@
 {% load static %}
 
 {% block body %}
+
+{% if simulacion_activa %}
+<!-- ══════ BANNER SIMULACIÓN — Visible en todo el portal cliente ══════ -->
+<div id="sim-banner" style="
+    position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+    background: linear-gradient(90deg, #78350f, #b45309);
+    color: white; padding: 9px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 700;
+    box-shadow: 0 3px 16px rgba(0,0,0,0.35);
+    gap: 12px;
+">
+    <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+        <span style="
+            background: rgba(255,255,255,0.18); border-radius: 50%;
+            width: 26px; height: 26px; flex-shrink:0;
+            display: inline-flex; align-items: center; justify-content: center;
+        ">
+            <i class="fa-solid fa-masks-theater" style="font-size:11px;"></i>
+        </span>
+        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            ● &nbsp;MODO SIMULACIÓN &nbsp;—&nbsp; Viendo como:
+            <strong>Cliente Institución</strong>
+            {% if cliente %}&nbsp;·&nbsp;<em>{{ cliente.nombre }}</em>{% endif %}
+            &nbsp;·&nbsp; Los cambios <strong>NO</strong> se guardan en la base de datos
+        </span>
+    </div>
+    <a href="/api/simular-rol/"
+       onclick="event.preventDefault(); salirSimulacion();"
+       style="
+           flex-shrink: 0;
+           background: rgba(255,255,255,0.15);
+           border: 1px solid rgba(255,255,255,0.35);
+           color: white; border-radius: 8px;
+           padding: 5px 14px; font-size: 11px; font-weight: 700;
+           text-decoration: none; cursor: pointer;
+           transition: background 0.2s;
+           display: inline-flex; align-items: center; gap: 6px;
+       "
+       onmouseover="this.style.background='rgba(255,255,255,0.28)'"
+       onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+        <i class="fa-solid fa-xmark"></i> Salir de simulación
+    </a>
+</div>
+<!-- Spacer para que el contenido no quede debajo del banner fijo -->
+<div style="height: 42px;"></div>
+
+<script>
+function salirSimulacion() {
+    fetch('/api/simular-rol/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ rol: '' })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) window.location.href = data.redirect || '/dashboard/';
+    })
+    .catch(() => { window.location.href = '/dashboard/'; });
+}
+</script>
+
+<!-- ══════ FAB "VIEW AS" (visible en modo simulación) ══════ -->
+<div id="viewas-fab" style="
+    position: fixed; top: 56px; right: 20px; z-index: 99998;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+">
+    <!-- Panel expandible -->
+    <div id="viewas-panel" style="
+        background: rgba(15,23,42,0.96); backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.12); border-radius: 18px;
+        width: 300px; max-height: 0; overflow: hidden; opacity: 0;
+        transform: translateY(10px) scale(0.95);
+        transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(59,130,246,0.1);
+    ">
+        <div style="padding: 16px;">
+            <!-- Header -->
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                <div style="width:30px;height:30px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:9px;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-masks-theater" style="color:white;font-size:12px;"></i>
+                </div>
+                <div>
+                    <div style="font-size:13px;font-weight:800;color:white;">View As</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.4);">Simular vista de otro perfil</div>
+                </div>
+                <div style="margin-left:auto;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:2px 7px;font-size:10px;color:#fbbf24;font-weight:700;">ACTIVO</div>
+            </div>
+            <!-- Opciones de rol -->
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <div onclick="cambiarRolCliente('superadmin')" style="border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.04);border-radius:10px;cursor:pointer;padding:9px 12px;display:flex;align-items:center;gap:10px;transition:all 0.18s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+                    <div style="width:24px;height:24px;background:#7c3aed;border-radius:7px;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-crown" style="color:white;font-size:9px;"></i></div>
+                    <div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);">Super Admin</div><div style="font-size:9px;color:rgba(255,255,255,0.35);">Vista completa de administración</div></div>
+                </div>
+                <div onclick="cambiarRolCliente('admin_pqrs')" style="border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.04);border-radius:10px;cursor:pointer;padding:9px 12px;display:flex;align-items:center;gap:10px;transition:all 0.18s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+                    <div style="width:24px;height:24px;background:#1e40af;border-radius:7px;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-shield-halved" style="color:white;font-size:9px;"></i></div>
+                    <div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);">Admin PQRS</div><div style="font-size:9px;color:rgba(255,255,255,0.35);">Gestión sin superadmin</div></div>
+                </div>
+                <div onclick="cambiarRolCliente('agente')" style="border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.04);border-radius:10px;cursor:pointer;padding:9px 12px;display:flex;align-items:center;gap:10px;transition:all 0.18s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+                    <div style="width:24px;height:24px;background:#9a3412;border-radius:7px;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-eye" style="color:white;font-size:9px;"></i></div>
+                    <div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);">Agente / Consultor</div><div style="font-size:9px;color:rgba(255,255,255,0.35);">Solo consulta</div></div>
+                </div>
+                <div onclick="cambiarRolCliente('cliente')" style="border:1px solid rgba(168,85,247,0.4);background:rgba(168,85,247,0.1);border-radius:10px;cursor:pointer;padding:9px 12px;display:flex;align-items:center;gap:10px;transition:all 0.18s;" onmouseover="this.style.background='rgba(168,85,247,0.2)'" onmouseout="this.style.background='rgba(168,85,247,0.1)'">
+                    <div style="width:24px;height:24px;background:#7c3aed;border-radius:7px;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-hospital-user" style="color:white;font-size:9px;"></i></div>
+                    <div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);">Cliente ✓ (actual)</div><div style="font-size:9px;color:rgba(168,85,247,0.8);">Portal del cliente — vista activa</div></div>
+                </div>
+            </div>
+            <!-- Salir -->
+            <button onclick="salirSimulacion()" style="width:100%;margin-top:10px;padding:8px;background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);border-radius:10px;color:#f87171;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='rgba(220,38,38,0.25)'" onmouseout="this.style.background='rgba(220,38,38,0.15)'">
+                <i class="fa-solid fa-xmark"></i> Salir de simulación → Dashboard
+            </button>
+        </div>
+    </div>
+    <!-- Botón FAB -->
+    <button id="viewas-btn" style="
+        width:50px;height:50px;
+        background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+        border:2px solid rgba(255,255,255,0.2);border-radius:15px;
+        color:white;font-size:17px;cursor:grab;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 8px 28px rgba(59,130,246,0.45);
+        transition:all 0.3s;position:relative;
+    ">
+        <i class="fa-solid fa-masks-theater"></i>
+        <div style="position:absolute;top:-4px;right:-4px;width:13px;height:13px;background:#f59e0b;border-radius:50%;border:2px solid white;animation:fabBlink 1.5s infinite;"></div>
+    </button>
+</div>
+<style>
+    @keyframes fabBlink { 0%,100%{opacity:1;}50%{opacity:0.35;} }
+</style>
+<script>
+let vasPanelOpen = false;
+function toggleVasPanel() {
+    const panel = document.getElementById('viewas-panel');
+    vasPanelOpen = !vasPanelOpen;
+    if (vasPanelOpen) {
+        panel.style.maxHeight = '500px'; panel.style.opacity = '1';
+        panel.style.transform = 'translateY(0) scale(1)';
+    } else {
+        panel.style.maxHeight = '0'; panel.style.opacity = '0';
+        panel.style.transform = 'translateY(10px) scale(0.95)';
+    }
+}
+function cambiarRolCliente(rol) {
+    fetch('/api/simular-rol/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ rol: rol })
+    })
+    .then(r => r.json())
+    .then(data => { if (data.ok && data.redirect) window.location.href = data.redirect; });
+}
+// Drag + click del FAB
+(function() {
+    const fab = document.getElementById('viewas-fab');
+    const btn = document.getElementById('viewas-btn');
+    const SKEY = 'viewas_fab_pos_cliente';
+    try {
+        const s = JSON.parse(localStorage.getItem(SKEY));
+        if (s) { fab.style.top = s.top; fab.style.right = 'auto'; fab.style.left = s.left; fab.style.bottom = 'auto'; }
+    } catch(e){}
+    let drag=false, moved=false, sx,sy,sl,st;
+    btn.addEventListener('mousedown', e => {
+        if(e.button!==0) return;
+        drag=true; moved=false;
+        const r=fab.getBoundingClientRect();
+        sx=e.clientX; sy=e.clientY; sl=r.left; st=r.top;
+        fab.style.right='auto'; fab.style.bottom='auto';
+        fab.style.left=sl+'px'; fab.style.top=st+'px';
+        btn.style.cursor='grabbing'; e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+        if(!drag) return;
+        const dx=e.clientX-sx, dy=e.clientY-sy;
+        if(Math.abs(dx)>3||Math.abs(dy)>3) moved=true;
+        fab.style.left=Math.max(0,Math.min(window.innerWidth-60,sl+dx))+'px';
+        fab.style.top=Math.max(0,Math.min(window.innerHeight-60,st+dy))+'px';
+    });
+    document.addEventListener('mouseup', e => {
+        if(!drag) return; drag=false; btn.style.cursor='grab';
+        try { localStorage.setItem(SKEY, JSON.stringify({top:fab.style.top,left:fab.style.left})); } catch(e){}
+        if(!moved) toggleVasPanel();
+    });
+    document.addEventListener('click', e => {
+        const fab2=document.getElementById('viewas-fab');
+        if(fab2&&!fab2.contains(e.target)&&vasPanelOpen) toggleVasPanel();
+    });
+})();
+</script>
+{% endif %}
+
 <div class="app-container">
     <!-- ═══════ SIDEBAR CLIENTE ═══════ -->
-    <aside class="sidebar">
+    <aside class="sidebar" {% if simulacion_activa %}style="top: 42px;"{% endif %}>
         <div class="brand">
             <div class="logo-wrap">
                 <img src="{% static 'tickets/img/LOGOSVG.svg' %}" alt="Unidossis">
@@ -19,6 +213,10 @@
             <a href="{% url 'public_portal' %}" class="nav-item {% if nav_active == 'radicar' %}active{% endif %}">
                 <i class="fa-solid fa-plus"></i>
                 <span>Radicar Caso</span>
+            </a>
+            <a href="{% url 'portal_cliente_analytics' %}" class="nav-item {% if nav_active == 'analiticas' %}active{% endif %}">
+                <i class="fa-solid fa-chart-bar"></i>
+                <span>Mis Analíticas</span>
             </a>
         </div>
 
@@ -43,10 +241,11 @@
     </aside>
 
     <!-- ═══════ MAIN CONTENT ═══════ -->
-    <main class="main-content">
+    <main class="main-content" {% if simulacion_activa %}style="margin-top: 0;"{% endif %}>
         {% block content %}{% endblock %}
     </main>
 </div>
 
 {% block page_js %}{% endblock %}
 {% endblock %}
+

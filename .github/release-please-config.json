@@ -1,0 +1,26 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "unidossis-pqrs",
+      "bump-minor-pre-major": false,
+      "bump-patch-for-minor-pre-major": false,
+      "draft": false,
+      "prerelease": false,
+      "extra-files": [
+        "unidossis_pqrs/tickets/__init__.py"
+      ],
+      "changelog-sections": [
+        {"type": "feat",     "section": "✨ Nuevas Funcionalidades"},
+        {"type": "fix",      "section": "🐛 Correcciones"},
+        {"type": "perf",     "section": "⚡ Mejoras de Rendimiento"},
+        {"type": "refactor", "section": "♻️ Refactorizaciones"},
+        {"type": "docs",     "section": "📝 Documentación"},
+        {"type": "style",    "section": "💄 Estilos y UI"},
+        {"type": "test",     "section": "✅ Tests"},
+        {"type": "ci",       "section": "👷 CI/CD y Configuración"},
+        {"type": "chore",    "section": "🔧 Mantenimiento"}
+      ]
+    }
+  }
+}

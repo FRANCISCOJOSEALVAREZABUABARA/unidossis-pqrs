@@ -1,0 +1,37 @@
+name: 📝 Release Please — Changelog Automático
+
+# ═══════════════════════════════════════════════════════════
+#  CÓMO FUNCIONA ESTE WORKFLOW:
+#
+#  1. Cada push a main con Conventional Commits es analizado.
+#  2. Release Please crea/actualiza automáticamente un PR con:
+#     - CHANGELOG.md actualizado (agrupado por tipo)
+#     - Versión bumpeada según el tipo de cambios:
+#         feat: → MINOR (v1.0.0 → v1.1.0)
+#         fix:  → PATCH (v1.0.0 → v1.0.1)
+#         feat! → MAJOR (v1.0.0 → v2.0.0)
+#  3. Cuando TÚ mergeas ese PR, automáticamente:
+#     - Crea un GitHub Release con las notas del changelog
+#     - Crea el tag de versión (v1.1.0)
+#     - Actualiza __version__ en el código
+# ═══════════════════════════════════════════════════════════
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: 📝 Generar Changelog y Release PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: simple
+          config-file: .github/release-please-config.json
+          manifest-file: .github/.release-please-manifest.json

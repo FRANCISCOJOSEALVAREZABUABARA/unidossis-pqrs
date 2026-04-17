@@ -19,6 +19,7 @@ urlpatterns = [
     # ─── Portal del Cliente ──────────────────────────────────
     path('portal/', views.public_pqrs_view, name='public_portal'),
     path('cliente/dashboard/', views.portal_cliente_dashboard, name='portal_cliente_dashboard'),
+    path('cliente/analiticas/', views.portal_cliente_analytics, name='portal_cliente_analytics'),
 
     # ─── Configuración SLA ───────────────────────────────────
     path('configurar-sla/', views.configurar_sla_view, name='configurar_sla'),
@@ -41,6 +42,8 @@ urlpatterns = [
     path('api/ticket/<str:ticket_id>/reclasificar/', views.api_reclasificar_ia, name='api_reclasificar_ia'),
     path('api/ticket/<str:ticket_id>/aplicar-reclasificacion/', views.api_aplicar_reclasificacion, name='api_aplicar_reclasificacion'),
     path('api/buscar-tickets/', views.api_buscar_tickets, name='api_buscar_tickets'),
+    path('api/simular-rol/', views.api_simular_rol, name='api_simular_rol'),
+    path('api/simular-opciones/', views.api_simular_opciones, name='api_simular_opciones'),
 
     # ─── Monitoreo del Sistema ───────────────────────────────
     path('monitoreo/', views.monitoreo_view, name='monitoreo'),

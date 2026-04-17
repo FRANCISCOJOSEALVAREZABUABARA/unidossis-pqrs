@@ -24,7 +24,7 @@
     .role-badge { padding:4px 12px; border-radius:8px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:5px; letter-spacing:0.3px; white-space:nowrap; }
     .role-badge.admin_pqrs { background:#EFF6FF; color:#1e40af; }
     .role-badge.director_regional { background:#F0FDF4; color:#166534; }
-    .role-badge.supervisor { background:#FFF7ED; color:#9a3412; }
+    .role-badge.agente { background:#FFF7ED; color:#9a3412; }
 </style>
 
     <!-- PESTAÑAS LATERALES: CLIENTES -->
@@ -280,7 +280,7 @@
                                     <span class="role-badge {{ u.rol }}">
                                         {% if u.rol == 'admin_pqrs' %}<i class="fa-solid fa-shield-halved" style="font-size:10px;"></i>{% endif %}
                                         {% if u.rol == 'director_regional' %}<i class="fa-solid fa-map-location-dot" style="font-size:10px;"></i>{% endif %}
-                                        {% if u.rol == 'supervisor' %}<i class="fa-solid fa-eye" style="font-size:10px;"></i>{% endif %}
+                                        {% if u.rol == 'agente' %}<i class="fa-solid fa-eye" style="font-size:10px;"></i>{% endif %}
                                         {{ u.get_rol_display }}
                                     </span>
                                 </td>

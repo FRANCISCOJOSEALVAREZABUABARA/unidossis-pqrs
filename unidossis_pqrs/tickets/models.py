@@ -110,6 +110,7 @@ class Ticket(models.Model):
     
     # Inteligencia Artificial
     analisis_ia = models.TextField(blank=True, null=True, verbose_name="Análisis de IA")
+    resumen_cliente_ia = models.CharField(max_length=400, blank=True, null=True, verbose_name="Resumen IA para Cliente")
     clasificado_por_ia = models.BooleanField(default=False, verbose_name="Auto-Clasificado por IA")
     
     # Notificaciones por SMTP
@@ -224,7 +225,7 @@ class PerfilUsuario(models.Model):
         ('superadmin', 'Super Administrador'),
         ('admin_pqrs', 'Administrador PQRS'),
         ('director_regional', 'Director Regional'),
-        ('supervisor', 'Supervisor'),
+        ('agente', 'Agente / Consultor'),
         ('cliente', 'Cliente Institución'),
     ]
 
@@ -241,7 +242,7 @@ class PerfilUsuario(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     rol = models.CharField(max_length=30, choices=ROL_CHOICES, default='admin_pqrs')
-    regional = models.CharField(max_length=50, choices=REGIONAL_CHOICES, blank=True, null=True, help_text="Solo para Directores Regionales")
+    regional = models.CharField(max_length=50, choices=REGIONAL_CHOICES, blank=True, null=True, help_text="Solo para Directores Regionales y Agentes regionales")
     telefono = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono / Celular")
     cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, help_text="Solo para usuarios de tipo Cliente")
     debe_cambiar_password = models.BooleanField(default=False, verbose_name="Debe cambiar contraseña",

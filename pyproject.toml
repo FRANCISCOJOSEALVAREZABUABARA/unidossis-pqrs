@@ -1,0 +1,59 @@
+# ═══════════════════════════════════════════════════════════
+# pyproject.toml — Configuración de herramientas del proyecto
+# ═══════════════════════════════════════════════════════════
+
+[tool.ruff]
+# Mismo formato que Black: líneas de hasta 100 caracteres
+line-length = 100
+
+# Directorios a ignorar en el análisis
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "migrations",        # Migraciones auto-generadas por Django
+    "scratch",           # Scripts de análisis temporales
+    "SIMULACION",        # Directorio de pruebas locales
+    "node_modules",
+]
+
+[tool.ruff.lint]
+# Reglas activas:
+#   E = errores de estilo (pycodestyle)
+#   F = errores reales de Python (pyflakes) — variables no usadas, imports sin usar
+#   I = orden de imports (isort)
+#   W = advertencias
+#   N = convenciones de nombres
+select = ["E", "F", "I", "W"]
+
+# Reglas ignoradas (justificadas para este proyecto):
+ignore = [
+    "E501",   # Línea muy larga — ya controlado por line-length
+    "E402",   # Módulo importado no al inicio — necesario en algunas vistas Django
+    "F401",   # Import sin usar — puede ser intencional en __init__.py
+    "W291",   # Espacios al final de línea — se limpia con formato automático
+    "E711",   # Comparación con None — Django ORM a veces requiere == None
+    "E712",   # Comparación con True/False — permitido en filtros de templates
+]
+
+[tool.ruff.lint.isort]
+# Orden estándar de imports para Django:
+# 1. Librería estándar (os, sys, datetime...)
+# 2. Librerías de terceros (django, requests...)
+# 3. Código local del proyecto
+known-third-party = ["django", "rest_framework"]
+known-first-party = ["tickets", "unidossis_pqrs"]
+
+
+# ─── Pytest (para tests futuros) ────────────────────────────
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "unidossis_pqrs.settings"
+python_files = ["tests.py", "test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--tb=short",      # Traceback compacto
+    "--no-header",     # Sin header de pytest
+    "-q",              # Modo silencioso (solo errores)
+]

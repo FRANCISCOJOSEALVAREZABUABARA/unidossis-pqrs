@@ -133,3 +133,86 @@ class MonitorRendimientoMiddleware:
             return 'SYS-003'
 
         return 'SYS-099'
+
+
+class SimulacionRolMiddleware:
+    """
+    Middleware de 'View As' / Role Impersonation — solo para superadmin.
+
+    Cuando el superadmin activa una simulación (session['simular_rol']),
+    este middleware parchea temporalmente perfil.rol en memoria para que
+    TODAS las vistas y templates muestren la interfaz del rol simulado.
+
+    Seguridad:
+    - Solo funciona si el usuario real es superadmin.
+    - Nunca persiste el cambio de rol en la base de datos.
+    - Protege contra saves accidentales sobreescribiendo .save() temporalmente.
+    """
+
+    ROLES_SIMULABLES = ['admin_pqrs', 'director_regional', 'agente', 'cliente']
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Flags por defecto
+        request.simulacion_activa = False
+        request.rol_original = None
+        request.rol_simulado = None
+        request.cliente_simulado = None
+
+        # Solo actuar si hay usuario autenticado con perfil superadmin y simulación en sesión
+        if (request.user.is_authenticated
+                and hasattr(request.user, 'perfil')
+                and request.user.perfil.rol == 'superadmin'):
+
+            rol_simulado = request.session.get('simular_rol')
+
+            if rol_simulado and rol_simulado in self.ROLES_SIMULABLES:
+                perfil = request.user.perfil
+                request.simulacion_activa = True
+                request.rol_original = 'superadmin'
+                request.rol_simulado = rol_simulado
+
+                # Parchear el rol en la instancia (NO en la BD)
+                perfil.rol = rol_simulado
+
+                # ── Fix Director Regional: parchear la regional desde sesión ──
+                if rol_simulado == 'director_regional':
+                    regional_sim = request.session.get('simular_regional', '')
+                    perfil.regional = regional_sim
+
+                # ── Fix Cliente: inyectar un cliente mock para poder navegar el portal ──
+                if rol_simulado == 'cliente':
+                    from .models import Cliente
+                    cliente_sim_id = request.session.get('simular_cliente_id')
+                    cliente_mock = None
+                    if cliente_sim_id:
+                        try:
+                            cliente_mock = Cliente.objects.get(pk=cliente_sim_id)
+                        except Cliente.DoesNotExist:
+                            pass
+                    if not cliente_mock:
+                        # Usar el primer cliente con tickets disponible
+                        cliente_mock = Cliente.objects.filter(tickets__isnull=False).first()
+                        if not cliente_mock:
+                            cliente_mock = Cliente.objects.first()
+                    # Inyectar en el perfil (solo en memoria)
+                    perfil.cliente = cliente_mock
+                    request.cliente_simulado = cliente_mock
+
+                # Proteger contra saves accidentales que podrían persistir el rol falso
+                _original_save = perfil.save
+                def _safe_save(*args, **kwargs):
+                    perfil.rol = 'superadmin'  # restaurar antes de cualquier save
+                    _original_save(*args, **kwargs)
+                    perfil.rol = rol_simulado  # re-aplicar después del save
+                perfil.save = _safe_save
+
+        response = self.get_response(request)
+
+        # Restaurar rol real al terminar (por si el objeto persiste en caché)
+        if request.simulacion_activa and hasattr(request.user, 'perfil'):
+            request.user.perfil.rol = 'superadmin'
+
+        return response

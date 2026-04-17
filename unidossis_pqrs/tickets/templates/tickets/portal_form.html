@@ -217,6 +217,29 @@
 </head>
 <body>
 
+{% if simulacion_activa %}
+<!-- Banner de simulación -->
+<div style="
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: linear-gradient(90deg, #92400e, #b45309);
+    color: white; padding: 8px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 700;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+">
+    <div style="display:flex; align-items:center; gap:8px;">
+        <span style="background:rgba(255,255,255,0.2); border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center;">
+            <i class="fa-solid fa-masks-theater" style="font-size:10px;"></i>
+        </span>
+        <span>• MODO SIMULACIÓN — Viendo como: <strong>Cliente Institución</strong>. Los cambios que hagas <strong>NO</strong> se guardan en la base de datos.</span>
+    </div>
+    <a href="/dashboard/" style="color:white; font-size:11px; opacity:0.85; text-decoration:none; border:1px solid rgba(255,255,255,0.4); border-radius:6px; padding:3px 10px;">
+        ✕ Salir de simulación
+    </a>
+</div>
+<div style="height:38px;"></div>  {# spacer para que no tape el contenido #}
+{% endif %}
+
 <div class="main-card">
     <header class="card-header">
         <div class="brand">
@@ -240,7 +263,39 @@
     {% if perfil_cliente %}
     <div class="client-banner">
         <span><i class="fa-solid fa-building-circle-check"></i> Institución: {{ perfil_cliente.nombre }}</span>
-        <a href="{% url 'logout' %}" class="logout-link"><i class="fa-solid fa-power-off"></i> Salir</a>
+        <div style="display:flex; align-items:center; gap:16px;">
+            <a href="{% url 'portal_cliente_dashboard' %}" style="
+                display:flex; align-items:center; gap:6px;
+                padding: 7px 14px;
+                background: rgba(30,64,175,0.12);
+                color: #1e40af;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 700;
+                text-decoration: none;
+                transition: all 0.2s;
+            " onmouseover="this.style.background='rgba(30,64,175,0.2)'" onmouseout="this.style.background='rgba(30,64,175,0.12)'">
+                <i class="fa-solid fa-arrow-left"></i> Volver al inicio
+            </a>
+            <a href="{% url 'logout' %}" class="logout-link"><i class="fa-solid fa-power-off"></i> Salir</a>
+        </div>
+    </div>
+    {% else %}
+    {# Sin perfil cliente (p.ej. usuario interno o simulación sin cliente asignado) #}
+    <div class="client-banner" style="background:#f0f9ff; color:#0369a1;">
+        <span><i class="fa-solid fa-info-circle"></i> Portal de radicación PQRS</span>
+        <a href="{% url 'portal_cliente_dashboard' %}" style="
+            display:flex; align-items:center; gap:6px;
+            padding: 7px 14px;
+            background: rgba(3,105,161,0.12);
+            color: #0369a1;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+        ">
+            <i class="fa-solid fa-arrow-left"></i> Volver al Dashboard
+        </a>
     </div>
     {% endif %}
 
