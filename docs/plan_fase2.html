@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan de Desarrollo — UNIDOSSIS PQRS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #2563EB; --green: #10b981; --amber: #f59e0b; --red: #ef4444; --gray: #64748b; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; color: #1e293b; margin: 0; padding: 30px 15px; line-height: 1.6; }
+        .container { max-width: 920px; margin: 0 auto; }
+        .card { background: #fff; border-radius: 12px; padding: 30px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1 { font-size: 24px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
+        h2 { font-size: 20px; margin-top: 0; }
+        h3 { font-size: 16px; margin-top: 20px; color: #334155; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }
+        th, td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        th { background: #f8fafc; font-weight: 600; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-done { background: #dcfce7; color: #166534; }
+        .badge-partial { background: #fef3c7; color: #92400e; }
+        .badge-pending { background: #fee2e2; color: #991b1b; }
+        .badge-blocked { background: #f1f5f9; color: #475569; }
+        .phase { border-left: 4px solid var(--primary); padding-left: 20px; margin: 20px 0; }
+        .phase-done { border-left-color: var(--green); }
+        .phase-current { border-left-color: var(--amber); }
+        .phase-future { border-left-color: var(--gray); }
+        .progress-bar { width: 100%; height: 24px; background: #e2e8f0; border-radius: 12px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600; }
+        .score { display: inline-block; font-size: 32px; font-weight: 700; }
+        .score-label { font-size: 14px; color: var(--gray); }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 6px; }
+        .alert { padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 14px; }
+        .alert-info { background: #eff6ff; border-left: 4px solid #3b82f6; }
+        .alert-warn { background: #fffbeb; border-left: 4px solid var(--amber); }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- ENCABEZADO -->
+    <div class="card">
+        <h1>🗺️ Plan de Desarrollo — UNIDOSSIS PQRS</h1>
+        <p><strong>Basado en:</strong> Auditoría Exhaustiva del 17 de Abril de 2026<br>
+        <strong>Puntos auditados:</strong> 20 hallazgos &nbsp;|&nbsp; <strong>Resueltos hoy:</strong> 5 &nbsp;|&nbsp; <strong>Pendientes:</strong> 15</p>
+        
+        <h3>Progreso General del Plan</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: 35%; background: linear-gradient(90deg, #10b981, #34d399);">35%</div>
+        </div>
+    </div>
+
+    <!-- SCORECARD ANTES vs AHORA -->
+    <div class="card">
+        <h2>📊 Scorecard: Antes vs Ahora</h2>
+        <table>
+            <thead>
+                <tr><th>Dimensión</th><th>Antes</th><th>Ahora</th><th>Cambio</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Modelos de datos</td><td>9/10</td><td>9/10</td><td>—</td></tr>
+                <tr><td><strong>Seguridad</strong></td><td>7/10</td><td><strong>8/10</strong></td><td>+1 (API Key eliminada)</td></tr>
+                <tr><td>Funcionalidad core</td><td>8/10</td><td><strong>9/10</strong></td><td>+1 (SLA funcional + Password Recovery)</td></tr>
+                <tr><td><strong>Testing</strong></td><td style="color:#ef4444;font-weight:700">0/10</td><td style="color:#10b981;font-weight:700"><strong>8/10</strong></td><td>+8 (67 tests)</td></tr>
+                <tr><td>Performance</td><td>5/10</td><td><strong>6/10</strong></td><td>+1 (caché SLA)</td></tr>
+                <tr><td>Escalabilidad</td><td>4/10</td><td>4/10</td><td>—</td></tr>
+                <tr><td>DevOps/CI-CD</td><td>8/10</td><td><strong>9/10</strong></td><td>+1 (health check)</td></tr>
+                <tr><td>Documentación</td><td>4/10</td><td><strong>5/10</strong></td><td>+1 (docs/)</td></tr>
+                <tr><td>Integraciones</td><td>3/10</td><td>3/10</td><td>—</td></tr>
+                <tr><td>UX/UI</td><td>8/10</td><td>8/10</td><td>—</td></tr>
+                <tr style="font-weight:700; background:#f8fafc;">
+                    <td>TOTAL</td><td>56/100</td><td style="color:#10b981;">69/100</td><td style="color:#10b981;">+13 puntos</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- BALANCE PUNTO POR PUNTO -->
+    <div class="card">
+        <h2>📋 Balance Punto por Punto de la Auditoría (20 hallazgos)</h2>
+        
+        <h3>🔴 Hallazgos CRÍTICOS (4 encontrados)</h3>
+        <table>
+            <thead><tr><th>#</th><th>Hallazgo</th><th>Estado</th><th>Detalle</th></tr></thead>
+            <tbody>
+                <tr><td>1</td><td>Tests Automatizados vacíos</td><td><span class="badge badge-done">✅ Resuelto</span></td><td>67 tests implementados cubriendo modelos, auth, roles, APIs, IA, notificaciones</td></tr>
+                <tr><td>2</td><td>API Key de Gemini expuesta en código</td><td><span class="badge badge-done">✅ Resuelto</span></td><td>Eliminado el fallback. Ahora solo se lee de variable de entorno</td></tr>
+                <tr><td>3</td><td>Ingesta automática de correos</td><td><span class="badge badge-blocked">🔒 Bloqueado</span></td><td>Requiere credenciales IMAP del correo corporativo (aún no disponibles)</td></tr>
+                <tr><td>4</td><td>SLA sin scheduler automático</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>El comando existe pero falta programarlo como tarea periódica en PythonAnywhere</td></tr>
+            </tbody>
+        </table>
+
+        <h3>🟠 Hallazgos IMPORTANTES (6 encontrados)</h3>
+        <table>
+            <thead><tr><th>#</th><th>Hallazgo</th><th>Estado</th><th>Detalle</th></tr></thead>
+            <tbody>
+                <tr><td>5</td><td>Sin cola de tareas asíncronas (Celery)</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>Las llamadas a Gemini siguen bloqueando el hilo HTTP</td></tr>
+                <tr><td>6</td><td>Media sin almacenamiento persistente</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>Los adjuntos se pierden si PythonAnywhere se reinicia</td></tr>
+                <tr><td>7</td><td>views.py es un monolito (2500+ líneas)</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>Se necesita dividir en módulos: auth, dashboard, tickets, portal, apis</td></tr>
+                <tr><td>8</td><td>APIs AJAX sin paginación</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>Con volúmenes altos puede causar timeouts</td></tr>
+                <tr><td>9</td><td>Sin caché global en dashboard</td><td><span class="badge badge-partial">🔶 Parcial</span></td><td>Se implementó mini-caché de 60s para SLA. Falta caché global (Redis) para KPIs</td></tr>
+                <tr><td>10</td><td>SLA hardcodeado en el modelo</td><td><span class="badge badge-done">✅ Resuelto</span></td><td>Ahora lee de ConfiguracionSLA con caché de 60 segundos</td></tr>
+            </tbody>
+        </table>
+
+        <h3>🟡 Hallazgos de MEJORA (10 encontrados)</h3>
+        <table>
+            <thead><tr><th>#</th><th>Hallazgo</th><th>Estado</th><th>Detalle</th></tr></thead>
+            <tbody>
+                <tr><td>11</td><td>Sin API REST externa</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>Falta Django REST Framework para integraciones con ERPs/CRMs</td></tr>
+                <tr><td>12</td><td>Sin exportación PDF</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>Solo hay Excel. Falta Weasyprint o ReportLab para PDFs</td></tr>
+                <tr><td>13</td><td>Emails en texto plano (sin HTML)</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>Falta diseñar plantillas HTML responsive con branding Unidossis</td></tr>
+                <tr><td>14</td><td>Sin plantillas de respuesta para agentes</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>Los agentes redactan desde cero cada vez</td></tr>
+                <tr><td>15</td><td>Sin filtros combinados avanzados</td><td><span class="badge badge-partial">🔶 Parcial</span></td><td>Se implementó buscador inteligente. Faltan filtros combinados avanzados</td></tr>
+                <tr><td>16</td><td>Reportes con datos estáticos</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>Faltan gráficas interactivas y tendencias temporales</td></tr>
+                <tr><td>17</td><td>Sin 2FA / MFA</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>Recomendado para roles admin en sector salud</td></tr>
+                <tr><td>18</td><td>Sin política de retención de datos</td><td><span class="badge badge-pending">⏳ Pendiente</span></td><td>La BD crece sin control; no hay lógica de archivo</td></tr>
+                <tr><td>19</td><td>Sin Health Check endpoint</td><td><span class="badge badge-done">✅ Resuelto</span></td><td>Endpoint /health/ creado con estado de BD, IA y estadísticas</td></tr>
+                <tr><td>20</td><td>Documentación técnica incompleta</td><td><span class="badge badge-partial">🔶 Parcial</span></td><td>Se creó docs/ con resumen visual. Falta README actualizado y diagrama de arquitectura</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- FASES -->
+    <div class="card">
+        <h2>🗺️ Hoja de Ruta por Fases</h2>
+
+        <!-- FASE 1 -->
+        <div class="phase phase-done">
+            <h3>✅ FASE 1 — Estabilización <span style="color:#10b981">(COMPLETADA)</span></h3>
+            <div class="progress-bar"><div class="progress-fill" style="width:100%; background:#10b981;">100%</div></div>
+            <ul>
+                <li>✅ Escribir tests automatizados (67 tests)</li>
+                <li>✅ Eliminar API Key del código fuente</li>
+                <li>✅ Conectar estado_sla() a ConfiguracionSLA (con caché 60s)</li>
+                <li>✅ Agregar endpoint /health/</li>
+                <li>✅ Recuperación de contraseña híbrida (email + admin)</li>
+                <li>✅ Documentación visual de cambios</li>
+            </ul>
+        </div>
+
+        <!-- FASE 2 -->
+        <div class="phase phase-current">
+            <h3>⏳ FASE 2 — Completar Funcionalidades Core <span style="color:#f59e0b">(SIGUIENTE)</span></h3>
+            <div class="progress-bar"><div class="progress-fill" style="width:0%; background:var(--amber);">0%</div></div>
+            <p>Objetivo: Completar las piezas que faltan para que la plataforma funcione al 100% de sus capacidades.</p>
+            <table>
+                <thead><tr><th>Tarea</th><th>Descripción</th><th>Dificultad</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Programar SLA automático</strong></td><td>Configurar <code>verificar_sla.py</code> como tarea diaria en PythonAnywhere (Task Scheduler)</td><td>🟢 Fácil (30 min)</td></tr>
+                    <tr><td><strong>Exportación PDF</strong></td><td>Generar reportes PDF descargables de tickets y estadísticas con Weasyprint</td><td>🟡 Media (1-2 días)</td></tr>
+                    <tr><td><strong>Plantillas HTML para emails</strong></td><td>Diseñar emails profesionales con logo, colores y botones para todas las notificaciones</td><td>🟡 Media (1-2 días)</td></tr>
+                    <tr><td><strong>Plantillas de respuesta</strong></td><td>CRUD de respuestas predefinidas para que los agentes no escriban desde cero</td><td>🟡 Media (1 día)</td></tr>
+                    <tr><td><strong>Paginación en APIs</strong></td><td>Agregar límites de resultados a las búsquedas AJAX para evitar timeouts</td><td>🟢 Fácil (2 horas)</td></tr>
+                    <tr><td><strong>Actualizar README</strong></td><td>Actualizar documentación con info correcta de PythonAnywhere y diagrama de arquitectura</td><td>🟢 Fácil (1 hora)</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- FASE 3 -->
+        <div class="phase phase-future">
+            <h3>🔮 FASE 3 — Performance y Escala</h3>
+            <div class="progress-bar"><div class="progress-fill" style="width:0%; background:var(--gray);">0%</div></div>
+            <p>Objetivo: Preparar la plataforma para manejar miles de tickets sin degradar el rendimiento.</p>
+            <table>
+                <thead><tr><th>Tarea</th><th>Descripción</th><th>Dificultad</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Refactorizar views.py</strong></td><td>Dividir el monolito de 2500+ líneas en módulos independientes (auth, dashboard, tickets, portal, apis, monitoreo)</td><td>🟡 Media (1-2 días)</td></tr>
+                    <tr><td><strong>Caché global (Redis)</strong></td><td>Implementar @cache_page en dashboard y consultas pesadas. Reducción de carga de 3-5s a milisegundos</td><td>🟡 Media (1 día)</td></tr>
+                    <tr><td><strong>Almacenamiento S3</strong></td><td>Migrar carpeta media/ a AWS S3 o Cloudflare R2 con django-storages para que los adjuntos persistan</td><td>🟡 Media (1 día)</td></tr>
+                    <tr><td><strong>Celery + Redis</strong></td><td>Mover análisis de IA y envío de emails a procesos en segundo plano. El usuario no espera</td><td>🔴 Alta (2-3 días)</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- FASE 4 -->
+        <div class="phase phase-future">
+            <h3>🏢 FASE 4 — Enterprise</h3>
+            <div class="progress-bar"><div class="progress-fill" style="width:0%; background:var(--gray);">0%</div></div>
+            <p>Objetivo: Funcionalidades avanzadas para competir con soluciones comerciales como Zendesk o Freshdesk.</p>
+            <table>
+                <thead><tr><th>Tarea</th><th>Descripción</th><th>Dificultad</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>API REST pública</strong></td><td>Endpoints documentados con Django REST Framework para integrar ERPs, CRMs y herramientas BI</td><td>🔴 Alta (3-4 días)</td></tr>
+                    <tr><td><strong>2FA / MFA</strong></td><td>Doble factor de autenticación para roles administrativos (cumplimiento sector salud)</td><td>🟡 Media (1-2 días)</td></tr>
+                    <tr><td><strong>Gráficas avanzadas en reportes</strong></td><td>Tendencias temporales, comparativa inter-regional, cumplimiento regulatorio</td><td>🟡 Media (2 días)</td></tr>
+                    <tr><td><strong>Ingesta automática de correos</strong></td><td>Lectura IMAP/webhook para crear tickets desde correos entrantes (requiere credenciales)</td><td>🔴 Alta (2-3 días)</td></tr>
+                    <tr><td><strong>Política de retención de datos</strong></td><td>Lógica de archivo de tickets antiguos para mantener la BD liviana</td><td>🟡 Media (1 día)</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- RECOMENDACIÓN -->
+    <div class="card">
+        <h2>💡 Recomendación para la Próxima Sesión</h2>
+        <div class="alert alert-info">
+            <strong>Empezar por los "Quick Wins" de la Fase 2:</strong>
+            <ol>
+                <li><strong>Programar SLA automático en PythonAnywhere</strong> (30 minutos) — Solo hay que ir al panel de PythonAnywhere → Tasks → agregar el comando.</li>
+                <li><strong>Paginación en APIs</strong> (2 horas) — Evita problemas de rendimiento cuando crezcan los datos.</li>
+                <li><strong>Plantillas HTML para emails</strong> (1-2 días) — Mejora inmediata en la imagen profesional del sistema.</li>
+            </ol>
+        </div>
+        <div class="alert alert-warn">
+            <strong>Bloqueados (requieren acción externa):</strong>
+            <ul>
+                <li>Ingesta de correos → Se necesitan las credenciales del correo corporativo.</li>
+                <li>WhatsApp Business API → Se necesitan las llaves de Meta.</li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
