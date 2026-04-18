@@ -198,10 +198,12 @@ def api_aplicar_reclasificacion(request, ticket_id):
 
 @login_required
 def api_buscar_tickets(request):
-    """Busca coincidencias agrupadas por categoría para el buscador inteligente."""
+    """Busca coincidencias agrupadas por categoría para el buscador inteligente.
+    Resultados limitados a LIMITE_BUSQUEDA por grupo para prevenir timeouts.
+    """
     q = request.GET.get('q', '').strip()
     if len(q) < 2:
-        return JsonResponse({'grupos': []})
+        return JsonResponse({'grupos': [], 'total': 0})
 
     perfil = request.user.perfil
     # Base query según rol
@@ -217,7 +219,7 @@ def api_buscar_tickets(request):
             filtro |= Q(responsable__icontains=request.user.last_name)
         qs = Ticket.objects.filter(filtro)
     else:
-        return JsonResponse({'grupos': []})
+        return JsonResponse({'grupos': [], 'total': 0})
 
     grupos = []
 
@@ -367,7 +369,12 @@ def api_buscar_tickets(request):
             'items': items,
         })
 
-    return JsonResponse({'grupos': grupos})
+    total_items = sum(len(g['items']) for g in grupos)
+    return JsonResponse({
+        'grupos': grupos,
+        'total': total_items,
+        'query': q,
+    })
 
 
 @login_required

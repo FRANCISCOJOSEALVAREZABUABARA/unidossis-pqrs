@@ -1,0 +1,45 @@
+{% extends "tickets/emails/base_email.html" %}
+{% block header_badge %}<span class="badge">📋 Respuesta Oficial</span>{% endblock %}
+{% block body %}
+<p class="greeting">Estimado/a {{ nombre_cliente }},</p>
+<p class="intro">Nos complace informarle que hemos dado respuesta a su solicitud PQRS. A continuación encontrará nuestra respuesta oficial:</p>
+
+<div class="info-card">
+  <h3>Información del Caso</h3>
+  <div class="info-row">
+    <span class="info-label">Número de Caso</span>
+    <span class="info-value"><span class="ticket-id">{{ ticket_id }}</span></span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Asunto</span>
+    <span class="info-value">{{ asunto }}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Estado</span>
+    <span class="info-value" style="color:#16a34a;font-weight:700">✅ Resuelto</span>
+  </div>
+</div>
+
+<div class="respuesta-box">
+  <h3>📝 Respuesta Oficial de UNIDOSSIS</h3>
+  <p>{{ respuesta_oficial }}</p>
+</div>
+
+{% if url_encuesta %}
+<div class="csat-section">
+  <h3>📊 ¿Cómo fue nuestra atención?</h3>
+  <p>Su opinión es muy importante y nos ayuda a mejorar continuamente nuestro servicio.</p>
+  <div class="stars">⭐⭐⭐⭐⭐</div>
+  <div class="btn-container" style="margin-top:16px;margin-bottom:0">
+    <a href="{{ url_encuesta }}" class="btn" style="background:linear-gradient(135deg,#059669,#16a34a)">
+      Calificar mi experiencia
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<div class="alert alert-success">
+  <strong>🎉 Caso cerrado:</strong> Su solicitud ha sido gestionada exitosamente.
+  Si tiene alguna inquietud adicional, puede crear una nueva PQRS en nuestro portal.
+</div>
+{% endblock %}

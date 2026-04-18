@@ -189,19 +189,31 @@ def recuperar_password_view(request):
 
                     reset_url = f'{base_url}/recuperar-password/confirmar/{uid}/{token}/'
 
+                    from django.template.loader import render_to_string
+
+                    html_message = None
+                    try:
+                        html_message = render_to_string('tickets/emails/reset_password.html', {
+                            'nombre_usuario': user_encontrado.get_full_name() or user_encontrado.username,
+                            'reset_url': reset_url,
+                        })
+                    except Exception:
+                        pass
+
                     send_mail(
-                        subject='🔑 Restablecer contraseña — Unidossis PQRS',
+                        subject='Restablecer contraseña — Unidossis PQRS',
                         message=(
                             f'Hola {user_encontrado.get_full_name() or user_encontrado.username},\n\n'
                             f'Recibimos una solicitud para restablecer su contraseña.\n\n'
-                            f'Haga clic en el siguiente enlace para crear una nueva contraseña:\n'
+                            f'Enlace para crear nueva contraseña:\n'
                             f'{reset_url}\n\n'
                             f'Este enlace es válido por 24 horas y solo puede usarse una vez.\n\n'
                             f'Si usted no solicitó este cambio, ignore este mensaje.\n\n'
                             f'— Unidossis PQRS'
                         ),
-                        from_email=None,  # Usa DEFAULT_FROM_EMAIL
+                        from_email=None,
                         recipient_list=[email],
+                        html_message=html_message,
                         fail_silently=False,
                     )
 

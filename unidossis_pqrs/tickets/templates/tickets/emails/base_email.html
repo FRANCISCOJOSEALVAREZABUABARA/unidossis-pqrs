@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block subject %}Notificación UNIDOSSIS{% endblock %}</title>
+<style>
+  /* Reset */
+  body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+  table,td{mso-table-lspace:0;mso-table-rspace:0}
+  img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none}
+  body{margin:0;padding:0;background-color:#f0f4f8;font-family:'Segoe UI',Arial,sans-serif}
+
+  .wrapper{background-color:#f0f4f8;padding:30px 0}
+  .container{max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+
+  /* Header */
+  .header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:32px 40px;text-align:center}
+  .header img{height:40px;margin-bottom:12px}
+  .header h1{color:#ffffff;font-size:22px;font-weight:700;margin:0;letter-spacing:-0.3px}
+  .header p{color:rgba(255,255,255,0.75);font-size:13px;margin:6px 0 0}
+
+  /* Badge de tipo */
+  .badge{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;margin-top:8px;letter-spacing:0.5px;text-transform:uppercase}
+
+  /* Body */
+  .body{padding:36px 40px}
+  .greeting{font-size:18px;font-weight:600;color:#1e3a5f;margin:0 0 8px}
+  .intro{font-size:14px;color:#64748b;line-height:1.6;margin:0 0 28px}
+
+  /* Info card */
+  .info-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px 24px;margin:0 0 24px}
+  .info-card h3{font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:0.8px;text-transform:uppercase;margin:0 0 14px}
+  .info-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #e2e8f0}
+  .info-row:last-child{border-bottom:none;padding-bottom:0}
+  .info-label{font-size:12px;color:#94a3b8;font-weight:600;min-width:130px}
+  .info-value{font-size:13px;color:#1e293b;font-weight:500;text-align:right;flex:1}
+
+  /* Ticket ID pill */
+  .ticket-id{background:#1e3a5f;color:#ffffff;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:700;font-family:monospace}
+
+  /* Respuesta box */
+  .respuesta-box{background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-left:4px solid #2563eb;border-radius:0 8px 8px 0;padding:20px 24px;margin:0 0 24px}
+  .respuesta-box h3{font-size:12px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.8px;margin:0 0 12px}
+  .respuesta-box p{font-size:14px;color:#1e293b;line-height:1.7;margin:0;white-space:pre-wrap}
+
+  /* CTA Button */
+  .btn-container{text-align:center;margin:28px 0}
+  .btn{display:inline-block;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#ffffff!important;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.3px}
+  .btn:hover{background:linear-gradient(135deg,#1d4ed8,#1e40af)}
+
+  /* CSAT Stars */
+  .csat-section{background:#fafafa;border:1px solid #e2e8f0;border-radius:10px;padding:24px;text-align:center;margin:0 0 24px}
+  .csat-section h3{font-size:14px;font-weight:700;color:#1e3a5f;margin:0 0 6px}
+  .csat-section p{font-size:13px;color:#64748b;margin:0 0 16px}
+  .stars{font-size:28px;letter-spacing:8px}
+
+  /* Divider */
+  .divider{border:none;border-top:1px solid #e2e8f0;margin:28px 0}
+
+  /* Alert boxes */
+  .alert{border-radius:8px;padding:14px 18px;margin:0 0 20px;font-size:13px;line-height:1.6}
+  .alert-info{background:#eff6ff;border-left:4px solid #3b82f6;color:#1e40af}
+  .alert-success{background:#f0fdf4;border-left:4px solid #22c55e;color:#166534}
+  .alert-warning{background:#fffbeb;border-left:4px solid #f59e0b;color:#92400e}
+
+  /* Footer */
+  .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:24px 40px;text-align:center}
+  .footer p{font-size:12px;color:#94a3b8;margin:0 0 4px;line-height:1.6}
+  .footer a{color:#2563eb;text-decoration:none}
+  .footer .social{margin-top:12px}
+  .footer .social a{display:inline-block;margin:0 6px;color:#94a3b8;font-size:11px;text-decoration:none}
+
+  /* Responsive */
+  @media(max-width:620px){
+    .body{padding:24px 20px}
+    .header{padding:24px 20px}
+    .footer{padding:20px}
+    .info-row{flex-direction:column}
+    .info-value{text-align:left;margin-top:2px}
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr><td align="center">
+      <table class="container" width="600" cellpadding="0" cellspacing="0" border="0">
+
+        <!-- HEADER -->
+        <tr><td class="header">
+          <h1>UNIDOSSIS</h1>
+          <p>Sistema de Gestión PQRS</p>
+          {% block header_badge %}<span class="badge">Notificación</span>{% endblock %}
+        </td></tr>
+
+        <!-- BODY -->
+        <tr><td class="body">
+          {% block body %}{% endblock %}
+        </td></tr>
+
+        <!-- FOOTER -->
+        <tr><td class="footer">
+          <p><strong>UNIDOSSIS S.A.S.</strong> — Servicio al Cliente</p>
+          <p>📧 <a href="mailto:servicio.cliente@unidossis.com.co">servicio.cliente@unidossis.com.co</a></p>
+          <p>Este correo fue generado automáticamente. Por favor no responda directamente a este mensaje.</p>
+          <p style="margin-top:12px;font-size:11px">
+            © 2025 UNIDOSSIS S.A.S. · 
+            <a href="https://pqrs.unidossis.com.co/portal/">Portal PQRS</a> · 
+            <a href="mailto:servicio.cliente@unidossis.com.co">Contacto</a>
+          </p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</div>
+</body>
+</html>

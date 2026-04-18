@@ -56,33 +56,50 @@ def rol_requerido(*roles):
     return decorator
 
 
-def _enviar_acuse_recibo(ticket, request=None):
-    """Envía acuse de recibo al cliente cuando se crea un ticket por email."""
+def _render_email_html(template_name, context):
+    """Renderiza una plantilla HTML de email. Retorna None si falla."""
     try:
+        from django.template.loader import render_to_string
+        return render_to_string(template_name, context)
+    except Exception:
+        return None
+
+
+def _enviar_acuse_recibo(ticket, request=None):
+    """Envía acuse de recibo al cliente con plantilla HTML premium."""
+    try:
+        subject = f'Recibimos su PQRS — Caso #{ticket.ticket_id} | Unidossis'
+        plain_text = (
+            f'Estimado/a {ticket.remitente_nombre or "Cliente"},\n\n'
+            f'Confirmamos que hemos recibido correctamente su solicitud.\n\n'
+            f'  Número de caso: {ticket.ticket_id}\n'
+            f'  Tipo de solicitud: {ticket.get_tipo_solicitud_display()}\n'
+            f'  Asunto: {ticket.asunto}\n'
+            f'  Fecha de ingreso: {ticket.fecha_ingreso.strftime("%d/%m/%Y %H:%M")}\n\n'
+            f'Nuestro equipo revisará su caso y le dará respuesta en los tiempos establecidos.\n\n'
+            f'Gracias por comunicarse con Unidossis.\n'
+            f'servicio.cliente@unidossis.com.co'
+        )
+        html_message = _render_email_html('tickets/emails/acuse_recibo.html', {
+            'nombre_cliente': ticket.remitente_nombre or 'Cliente',
+            'ticket_id': ticket.ticket_id,
+            'tipo_solicitud': ticket.get_tipo_solicitud_display(),
+            'asunto': ticket.asunto,
+            'fecha_ingreso': ticket.fecha_ingreso.strftime('%d/%m/%Y %H:%M'),
+        })
         send_mail(
-            subject=f'✅ Recibimos su PQRS — Caso #{ticket.ticket_id} | Unidossis',
-            message=(
-                f'Estimado/a {ticket.remitente_nombre or "Cliente"},\n\n'
-                f'Confirmamos que hemos recibido correctamente su solicitud.\n\n'
-                f'  • Número de caso: {ticket.ticket_id}\n'
-                f'  • Tipo de solicitud: {ticket.get_tipo_solicitud_display()}\n'
-                f'  • Asunto: {ticket.asunto}\n'
-                f'  • Fecha de ingreso: {ticket.fecha_ingreso.strftime("%d/%m/%Y %H:%M")}\n\n'
-                f'Nuestro equipo revisará su caso y le dará respuesta en los tiempos establecidos '
-                f'según nuestra política de servicio.\n\n'
-                f'Gracias por comunicarse con Unidossis.\n\n'
-                f'— Servicio al Cliente UNIDOSSIS\n'
-                f'  servicio.cliente@unidossis.com.co'
-            ),
+            subject=subject,
+            message=plain_text,
             from_email='Servicio al cliente Unidossis <servicio.cliente@unidossis.com.co>',
             recipient_list=[ticket.remitente_email],
+            html_message=html_message,
             fail_silently=True,
         )
         ticket.auto_respuesta_enviada = True
         ticket.save(update_fields=['auto_respuesta_enviada'])
         LogActividad.objects.create(
             ticket=ticket, usuario=None,
-            accion='Acuse de recibo enviado automáticamente al cliente',
+            accion='Acuse de recibo HTML enviado automáticamente al cliente',
             detalle=f'Correo enviado a: {ticket.remitente_email}'
         )
     except Exception:
@@ -91,55 +108,52 @@ def _enviar_acuse_recibo(ticket, request=None):
 
 def _enviar_respuesta_formal_y_csat(ticket, request=None):
     """
-    Envía la respuesta formal al cierre e incluye enlace a encuesta CSAT.
-    Crea el registro de encuesta con token único.
+    Envía la respuesta formal al cierre con plantilla HTML premium e incluye
+    enlace a encuesta CSAT. Crea el registro de encuesta con token único.
     """
     try:
-        # Crear o recuperar encuesta CSAT
         encuesta, created = EncuestaSatisfaccion.objects.get_or_create(ticket=ticket)
-
-        # Construir URL de la encuesta
-        if request:
-            base_url = request.build_absolute_uri('/')[:-1]
-        else:
-            base_url = 'https://pqrs.unidossis.com.co'
-
+        base_url = request.build_absolute_uri('/')[:-1] if request else 'https://pqrs.unidossis.com.co'
         url_encuesta = f'{base_url}/encuesta/{encuesta.token}/'
 
-        mensaje = (
+        subject = f'Respuesta a su PQRS #{ticket.ticket_id} — Unidossis'
+        plain_text = (
             f'Estimado/a {ticket.remitente_nombre or "Cliente"},\n\n'
-            f'Nos complace informarle que hemos dado respuesta a su solicitud PQRS:\n\n'
-            f'  • Número de caso: {ticket.ticket_id}\n'
-            f'  • Asunto: {ticket.asunto}\n\n'
-            f'RESPUESTA OFICIAL DE UNIDOSSIS:\n'
-            f'{"─" * 50}\n'
-            f'{ticket.respuesta_oficial or "Ver respuesta en el portal de clientes."}\n'
-            f'{"─" * 50}\n\n'
-            f'📊 ENCUESTA DE SATISFACCIÓN:\n'
-            f'Por favor califique nuestra atención haciendo clic en el siguiente enlace:\n'
-            f'{url_encuesta}\n\n'
-            f'Su opinión es muy importante para nosotros y nos ayuda a mejorar continuamente.\n\n'
-            f'Gracias por su confianza en Unidossis.\n\n'
-            f'— Servicio al Cliente UNIDOSSIS\n'
-            f'  servicio.cliente@unidossis.com.co'
+            f'Hemos dado respuesta a su solicitud PQRS:\n\n'
+            f'  Número de caso: {ticket.ticket_id}\n'
+            f'  Asunto: {ticket.asunto}\n\n'
+            f'RESPUESTA OFICIAL:\n'
+            f'{ticket.respuesta_oficial or "Ver respuesta en el portal de clientes."}\n\n'
+            f'Encuesta de satisfacción: {url_encuesta}\n\n'
+            f'Gracias por su confianza en Unidossis.\n'
+            f'servicio.cliente@unidossis.com.co'
         )
-
+        html_message = _render_email_html('tickets/emails/respuesta_formal.html', {
+            'nombre_cliente': ticket.remitente_nombre or 'Cliente',
+            'ticket_id': ticket.ticket_id,
+            'asunto': ticket.asunto,
+            'respuesta_oficial': ticket.respuesta_oficial or 'Ver respuesta en el portal de clientes.',
+            'url_encuesta': url_encuesta,
+        })
         send_mail(
-            subject=f'📋 Respuesta a su PQRS #{ticket.ticket_id} — Unidossis',
-            message=mensaje,
+            subject=subject,
+            message=plain_text,
             from_email='Servicio al cliente Unidossis <servicio.cliente@unidossis.com.co>',
             recipient_list=[ticket.remitente_email],
+            html_message=html_message,
             fail_silently=False,
         )
         ticket.respuesta_formal_enviada = True
         ticket.save(update_fields=['respuesta_formal_enviada'])
         LogActividad.objects.create(
             ticket=ticket, usuario=request.user if request else None,
-            accion='Respuesta formal enviada al cliente con encuesta CSAT',
+            accion='Respuesta formal HTML enviada al cliente con encuesta CSAT',
             detalle=f'URL encuesta: {url_encuesta}'
         )
     except Exception:
         pass
+
+
 
 
 def _get_client_ip(request):

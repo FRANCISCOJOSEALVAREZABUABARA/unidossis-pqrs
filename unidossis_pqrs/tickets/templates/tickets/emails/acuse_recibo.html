@@ -1,0 +1,36 @@
+{% extends "tickets/emails/base_email.html" %}
+{% block header_badge %}<span class="badge">✅ Recibimos su PQRS</span>{% endblock %}
+{% block body %}
+<p class="greeting">Estimado/a {{ nombre_cliente }},</p>
+<p class="intro">Hemos recibido correctamente su solicitud PQRS. A continuación encontrará los detalles de su caso:</p>
+
+<div class="info-card">
+  <h3>Detalles de su Solicitud</h3>
+  <div class="info-row">
+    <span class="info-label">Número de Caso</span>
+    <span class="info-value"><span class="ticket-id">{{ ticket_id }}</span></span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Tipo de Solicitud</span>
+    <span class="info-value">{{ tipo_solicitud }}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Asunto</span>
+    <span class="info-value">{{ asunto }}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Fecha de Ingreso</span>
+    <span class="info-value">{{ fecha_ingreso }}</span>
+  </div>
+</div>
+
+<div class="alert alert-info">
+  <strong>⏱️ Tiempo de Respuesta:</strong> Nuestro equipo revisará su caso y le dará respuesta en los tiempos
+  establecidos según nuestra política de servicio. Le notificaremos por este mismo correo cuando tengamos una respuesta.
+</div>
+
+<hr class="divider">
+<p style="font-size:13px;color:#64748b;text-align:center;margin:0">
+  Guarde este número de caso para hacer seguimiento: <strong>{{ ticket_id }}</strong>
+</p>
+{% endblock %}
