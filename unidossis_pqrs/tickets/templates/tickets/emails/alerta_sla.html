@@ -1,0 +1,84 @@
+{% extends "tickets/emails/base_email.html" %}
+{% block header_badge %}
+  {% if tipo == 'vencido' %}
+    <span class="badge" style="background:rgba(239,68,68,0.3);border-color:rgba(239,68,68,0.5)">🚨 SLA VENCIDO — ESCALAMIENTO</span>
+  {% else %}
+    <span class="badge" style="background:rgba(245,158,11,0.3);border-color:rgba(245,158,11,0.5)">⚠️ SLA EN PELIGRO</span>
+  {% endif %}
+{% endblock %}
+{% block body %}
+
+{% if tipo == 'vencido' %}
+<div class="alert" style="background:#fef2f2;border-left:4px solid #ef4444;color:#7f1d1d;font-size:14px;font-weight:600">
+  🚨 ACCIÓN INMEDIATA REQUERIDA: Este ticket ha superado el límite de SLA establecido.
+</div>
+{% else %}
+<div class="alert alert-warning">
+  ⚠️ Este ticket está próximo a vencer su SLA. Por favor gestione a la brevedad.
+</div>
+{% endif %}
+
+<div class="info-card">
+  <h3>Información del Ticket</h3>
+  <div class="info-row">
+    <span class="info-label">ID del Caso</span>
+    <span class="info-value"><span class="ticket-id">{{ ticket_id }}</span></span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Asunto</span>
+    <span class="info-value">{{ asunto }}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Cliente / Institución</span>
+    <span class="info-value">{{ cliente }}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Regional</span>
+    <span class="info-value">{{ regional }}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Responsable Asignado</span>
+    <span class="info-value">{{ responsable }}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Estado Actual</span>
+    <span class="info-value">{{ estado }}</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Días Transcurridos</span>
+    <span class="info-value" style="color:{% if tipo == 'vencido' %}#ef4444{% else %}#f59e0b{% endif %};font-weight:700;font-size:16px">
+      {{ dias }} días
+    </span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Límite SLA</span>
+    <span class="info-value">{{ limite_dias }} días</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Fecha de Ingreso</span>
+    <span class="info-value">{{ fecha_ingreso }}</span>
+  </div>
+</div>
+
+{% if tipo == 'vencido' %}
+<div class="respuesta-box" style="border-left-color:#ef4444;background:linear-gradient(135deg,#fef2f2,#fff)">
+  <h3 style="color:#ef4444">🚨 ESCALAMIENTO REQUERIDO</h3>
+  <p style="font-size:14px;line-height:1.7">
+    Este caso lleva <strong>{{ dias_excedido }} días de retraso</strong> sobre el límite establecido.<br>
+    Debe <strong>reasignarse o escalarse de forma inmediata</strong> a un nivel superior de atención.
+  </p>
+</div>
+{% endif %}
+
+<div class="btn-container">
+  <a href="{{ url_ticket }}" class="btn" style="{% if tipo == 'vencido' %}background:linear-gradient(135deg,#ef4444,#b91c1c){% endif %}">
+    {% if tipo == 'vencido' %}Escalar Ticket Ahora{% else %}Atender Ticket{% endif %}
+  </a>
+</div>
+
+<hr class="divider">
+<p style="font-size:12px;color:#94a3b8;text-align:center;margin:0">
+  Esta es una notificación automática del Sistema PQRS UNIDOSSIS.<br>
+  Generada el {{ fecha_generacion }} para el periodo de verificación SLA.
+</p>
+{% endblock %}
