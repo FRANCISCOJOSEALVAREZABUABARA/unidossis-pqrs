@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía Técnica: Protocolo de Metadatos y Monitoreo PQRS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #334155;
+            --text-bold: #0f172a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main); 
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        header { 
+            text-align: center; 
+            margin-bottom: 60px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+        }
+        header h1 { 
+            font-size: 2.5rem; 
+            color: var(--text-bold); 
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        header p { font-size: 1.1rem; color: #64748b; }
+
+        .section { 
+            background: var(--card-bg); 
+            border-radius: 24px; 
+            padding: 40px; 
+            margin-bottom: 40px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+        }
+
+        .section-title { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            margin-bottom: 25px; 
+            color: var(--text-bold);
+            font-size: 1.5rem;
+        }
+        .section-title i { 
+            background: var(--accent); 
+            color: white; 
+            width: 40px; 
+            height: 40px; 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        h3 { margin: 20px 0 10px; color: var(--text-bold); }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 16px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .step-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .step-card {
+            background: var(--bg);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .badge-demo {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 20px;
+            background: #f1f5f9;
+            border-radius: 16px;
+            margin: 15px 0;
+            border: 1px dashed var(--accent);
+            justify-content: center;
+        }
+
+        .badge {
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-purple { background: #f3e8ff; color: #6b21a8; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-gray { background: #f1f5f9; color: #475569; }
+
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .screenshot-item {
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid var(--border);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        .screenshot-item:hover { transform: scale(1.02); }
+        .screenshot-item img { width: 100%; display: block; }
+        .screenshot-caption { padding: 10px; background: var(--bg); font-size: 11px; text-align: center; font-weight: 600; }
+
+        footer.page-footer {
+            text-align: center;
+            margin-top: 60px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            padding-bottom: 40px;
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: 16px;
+            margin: 25px 0;
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        .alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 25px 0;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        table th { background: #f8fafc; color: var(--text-bold); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+        table th, table td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        table tr:last-child td { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Protocolo de Metadatos y Auditoría</h1>
+        <p>Guía Maestra para el Monitoreo de Rendimiento y Versionamiento — UNIDOSSIS PQRS</p>
+    </header>
+
+    <!-- 1. COMPONENTE VISUAL -->
+    <div class="section">
+        <div class="section-title">
+            <i class="fa-solid fa-gauge-high"></i>
+            <h2>El Nuevo Footer de Monitoreo</h2>
+        </div>
+        <p>Hemos implementado una barra de estado inteligente en todos los formularios clave. Esta barra permite a los auditores y desarrolladores conocer la salud técnica del sistema al instante.</p>
+        
+        <div class="badge-demo">
+            <span class="badge badge-blue"><i class="fa-solid fa-barcode"></i> F-01 · PORTAL-PQRS</span>
+            <span class="badge badge-purple"><i class="fa-solid fa-code-branch"></i> v1.0.0</span>
+            <span class="badge badge-green"><i class="fa-solid fa-bolt"></i> Servidor: 32ms</span>
+            <span class="badge badge-gray"><i class="fa-solid fa-spinner"></i> Carga: 145ms</span>
+        </div>
+
+        <div class="alert alert-info">
+            <i class="fa-solid fa-lightbulb"></i>
+            <div>
+                <strong>¿Cómo leer los datos?</strong> El código (ej: F-01) identifica el formulario en la documentación técnica. El tiempo de servidor mide qué tan rápido responde Django, y el tiempo de carga mide la experiencia total del usuario (incluyendo imágenes y scripts).
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. FUNCIONAMIENTO INTERNO -->
+    <div class="section">
+        <div class="section-title">
+            <i class="fa-solid fa-gears"></i>
+            <h2>Funcionamiento Interno</h2>
+        </div>
+        <div class="step-grid">
+            <div class="step-card">
+                <h3>🕒 Middleware</h3>
+                <p>Ubicado en <code>tickets/middleware.py</code>, marca el inicio exacto de la petición (Timestamp).</p>
+            </div>
+            <div class="step-card">
+                <h3>🧠 Context Processor</h3>
+                <p>Ubicado en <code>tickets/context_processors.py</code>, inyecta automáticamente los metadatos en el contexto de Django si la URL está registrada.</p>
+            </div>
+            <div class="step-card">
+                <h3>🎨 Template Partial</h3>
+                <p>Ubicado en <code>templates/tickets/_form_footer.html</code>, contiene la lógica visual y el script de telemetría del cliente.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MANTENIMIENTO -->
+    <div class="section">
+        <div class="section-title">
+            <i class="fa-solid fa-book"></i>
+            <h2>Guía de Mantenimiento</h2>
+        </div>
+
+        <h3>¿Cómo actualizar versiones o códigos?</h3>
+        <p>Todo se centraliza en el <code>FORM_REGISTRY</code> dentro de <code>tickets/context_processors.py</code>. Si necesita cambiar la versión del Portal PQRS a v1.1.0, simplemente modifique el valor en ese diccionario:</p>
+        
+        <div class="code-block">
+'portal': {
+    'codigo': 'F-01',
+    'nombre': 'PORTAL-PQRS',
+    'version': 'v1.1.0'  <-- Cambiar aquí
+}
+        </div>
+
+        <h3>¿Cómo añadir el footer a un formulario nuevo?</h3>
+        <p>1. Asegúrese de que el <code>url_name</code> esté en el registro de <code>context_processors.py</code>.</p>
+        <p>2. Incluya el componente en su template:</p>
+        <div class="code-block">
+{% include "tickets/_form_footer.html" %}
+        </div>
+    </div>
+
+    <!-- 4. REGISTRO DE FORMULARIOS -->
+    <div class="section">
+        <div class="section-title">
+            <i class="fa-solid fa-list-check"></i>
+            <h2>Inventario de Formularios Auditados</h2>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Identificador Técnico</th>
+                    <th>Propósito</th>
+                    <th>Versión</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>F-01</td><td>PORTAL-PQRS</td><td>Radicación externa de tickets</td><td>v1.0.0</td></tr>
+                <tr><td>F-02</td><td>LOGIN</td><td>Acceso al sistema</td><td>v1.1.0</td></tr>
+                <tr><td>F-05</td><td>RECUPERAR-PWD</td><td>Restablecimiento de claves</td><td>v1.0.0</td></tr>
+                <tr><td>F-07</td><td>DETALLE-TICKET</td><td>Gestión y respuesta de casos</td><td>v1.2.0</td></tr>
+                <tr><td>F-08</td><td>GESTION-CLIENTES</td><td>Administración de instituciones</td><td>v1.0.0</td></tr>
+                <tr><td>F-10</td><td>CONFIG-SLA</td><td>Reglas de negocio y tiempos</td><td>v1.0.0</td></tr>
+                <tr><td>F-12</td><td>CONSOLA-TABLAS</td><td>Mantenimiento de maestros</td><td>v1.0.0</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <footer class="page-footer">
+        <p>Documentación Generada por Antigravity AI para UNIDOSSIS PQRS</p>
+        <p>2026 &copy; Todos los derechos reservados.</p>
+    </footer>
+</div>
+
+</body>
+</html>

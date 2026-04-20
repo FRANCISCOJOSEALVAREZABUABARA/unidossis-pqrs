@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from .models import (
     Ticket, ArchivoAdjunto, Cliente, Ciudad, Cargo, MaestroInstitucion, PerfilUsuario,
     ConfiguracionSLA, AlertaSLA, LogActividad, ComentarioTicket, EncuestaSatisfaccion, FeedbackIA,
-    SolicitudResetPassword
+    SolicitudResetPassword, PermisoRol
 )
 
 # Inline para PerfilUsuario dentro de User
@@ -99,4 +99,10 @@ class SolicitudResetPasswordAdmin(admin.ModelAdmin):
     list_display = ['user', 'email_ingresado', 'estado', 'fecha_solicitud', 'resuelta_por']
     list_filter = ['estado']
     readonly_fields = ['fecha_solicitud']
+
+@admin.register(PermisoRol)
+class PermisoRolAdmin(admin.ModelAdmin):
+    list_display = ['rol', 'permiso', 'permitido']
+    list_filter = ['rol', 'permitido']
+    list_editable = ['permitido']
 

@@ -145,6 +145,29 @@ def dashboard_view(request):
         'TIPO_CHOICES': Ticket.TIPO_SOLICITUD_CHOICES,
         'REGIONAL_CHOICES': Ticket.REGIONAL_CHOICES,
     }
+
+    # ─── Indicadores CSAT ─────────────────────────────────────
+    encuestas_respondidas = EncuestaSatisfaccion.objects.filter(
+        ticket__in=Ticket.objects.all() if perfil.rol in ['superadmin', 'admin_pqrs'] else tickets_query,
+        puntuacion__isnull=False
+    )
+    total_encuestas_resp = encuestas_respondidas.count()
+    csat_promedio = encuestas_respondidas.aggregate(avg=Avg('puntuacion'))['avg']
+    csat_promedio = round(csat_promedio, 1) if csat_promedio else 0
+    csat_satisfechos = encuestas_respondidas.filter(puntuacion__gte=3).count()
+    csat_insatisfechos = encuestas_respondidas.filter(puntuacion__lt=3).count()
+    csat_tasa = round((csat_satisfechos / total_encuestas_resp * 100), 1) if total_encuestas_resp > 0 else 0
+    csat_pendientes = EncuestaSatisfaccion.objects.filter(
+        ticket__in=Ticket.objects.all() if perfil.rol in ['superadmin', 'admin_pqrs'] else tickets_query,
+        puntuacion__isnull=True
+    ).exclude(estado='expirada').count()
+
+    context['csat_promedio'] = csat_promedio
+    context['csat_total_resp'] = total_encuestas_resp
+    context['csat_satisfechos'] = csat_satisfechos
+    context['csat_insatisfechos'] = csat_insatisfechos
+    context['csat_tasa'] = csat_tasa
+    context['csat_pendientes'] = csat_pendientes
     return render(request, 'tickets/dashboard.html', context)
 
 

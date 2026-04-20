@@ -24,6 +24,7 @@ class MonitorRendimientoMiddleware:
 
     def __call__(self, request):
         inicio = time.time()
+        request._inicio_form = inicio  # Disponible para context processors y templates
 
         response = self.get_response(request)
 

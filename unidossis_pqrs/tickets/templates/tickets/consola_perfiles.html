@@ -1,0 +1,185 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+
+{% block title %}Perfiles de Usuario — Consola Central | UNIDOSSIS{% endblock %}
+
+{% block content %}
+<style>
+    .breadcrumb { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; color:var(--text-faint); }
+    .breadcrumb a { color:var(--accent); font-weight:600; }
+    .breadcrumb a:hover { text-decoration:underline; }
+    .profiles-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; }
+    .profile-card {
+        background:white; border-radius:18px; padding:24px;
+        border:1px solid rgba(30,58,138,0.08); transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+        display:flex; flex-direction:column; gap:14px;
+    }
+    .profile-card:hover { transform:translateY(-3px); box-shadow:0 12px 30px -8px rgba(0,0,0,0.1); border-color:rgba(59,130,246,0.2); }
+    .profile-card.inactive { opacity:0.6; }
+    .profile-top { display:flex; align-items:center; gap:14px; }
+    .profile-avatar {
+        width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+        font-size:18px; font-weight:800; color:white; flex-shrink:0;
+        box-shadow:0 4px 12px rgba(0,0,0,0.15);
+    }
+    .profile-name { font-size:14px; font-weight:700; color:var(--primary); line-height:1.3; }
+    .profile-username { font-size:11px; color:var(--text-faint); font-family:monospace; }
+    .profile-role {
+        display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:8px;
+        font-size:11px; font-weight:700; width:fit-content;
+    }
+    .profile-role.superadmin { background:#1e293b; color:white; }
+    .profile-role.admin_pqrs { background:#eff6ff; color:#1e40af; }
+    .profile-role.director_regional { background:#f0fdf4; color:#166534; }
+    .profile-role.agente { background:#fff7ed; color:#9a3412; }
+    .profile-role.cliente { background:#f5f3ff; color:#7c3aed; }
+    .profile-info { display:flex; flex-direction:column; gap:6px; }
+    .profile-info-row { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted); }
+    .profile-info-row i { width:14px; text-align:center; font-size:10px; color:var(--text-faint); }
+    .profile-actions { display:flex; gap:6px; margin-top:auto; padding-top:10px; border-top:1px solid var(--border-light); }
+    .profile-actions a, .profile-actions button {
+        flex:1; padding:8px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer;
+        display:flex; align-items:center; justify-content:center; gap:6px; font-family:inherit;
+        transition:all 0.2s; text-decoration:none;
+    }
+    .profile-actions .btn-view { background:var(--accent-soft); color:var(--accent); border:none; }
+    .profile-actions .btn-view:hover { background:var(--accent); color:white; }
+    .filter-bar {
+        display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;
+    }
+    .filter-chip {
+        padding:8px 16px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer;
+        border:1.5px solid var(--border); background:white; color:var(--text-muted);
+        transition:all 0.2s; font-family:inherit; text-decoration:none;
+    }
+    .filter-chip:hover { border-color:var(--accent); color:var(--accent); }
+    .filter-chip.active { background:var(--accent); color:white; border-color:var(--accent); }
+    .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+    .status-dot.active { background:#10b981; }
+    .status-dot.inactive { background:#ef4444; }
+</style>
+
+<div class="breadcrumb">
+    <a href="{% url 'dashboard' %}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+    <a href="{% url 'consola_central' %}">Consola Central</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+    <span>Perfiles de Usuario</span>
+</div>
+
+<div class="page-header">
+    <div style="display:flex; align-items:center; gap:14px;">
+        <div style="width:48px; height:48px; background:#e0e7ff; border-radius:14px; display:flex; align-items:center; justify-content:center;">
+            <i class="fa-solid fa-id-card" style="color:#4f46e5; font-size:20px;"></i>
+        </div>
+        <div>
+            <h1 style="font-size:22px;">Perfiles de Usuario</h1>
+            <p>Directorio del equipo y personalización de perfiles</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filter-bar">
+    <form method="GET" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; flex:1;">
+        <div style="position:relative; flex:1; max-width:320px;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:12px;"></i>
+            <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre, usuario, email..."
+                   style="width:100%; padding:9px 12px 9px 36px; border:1.5px solid var(--border); border-radius:10px; font-size:12px; font-family:inherit; outline:none;"
+                   onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+        </div>
+        <input type="hidden" name="rol" id="filterRol" value="{{ filtro_rol }}">
+        <button type="submit" class="btn btn-outline btn-sm" style="gap:6px;">
+            <i class="fa-solid fa-filter"></i> Filtrar
+        </button>
+    </form>
+</div>
+
+<!-- Role filter chips -->
+<div style="display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap;">
+    <a href="{% url 'consola_perfiles' %}{% if q %}?q={{ q }}{% endif %}" class="filter-chip {% if not filtro_rol %}active{% endif %}">
+        Todos
+    </a>
+    {% for rol_key, rol_label in ROL_CHOICES %}
+    <a href="{% url 'consola_perfiles' %}?rol={{ rol_key }}{% if q %}&q={{ q }}{% endif %}" class="filter-chip {% if filtro_rol == rol_key %}active{% endif %}">
+        {{ rol_label }}
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Grid de perfiles -->
+<div class="profiles-grid">
+    {% for p in perfiles %}
+    <div class="profile-card {% if not p.user.is_active %}inactive{% endif %}">
+        <div class="profile-top">
+            <div class="profile-avatar" style="
+                {% if p.rol == 'superadmin' %}background:linear-gradient(135deg,#1e293b,#334155);
+                {% elif p.rol == 'admin_pqrs' %}background:linear-gradient(135deg,#1e40af,#3b82f6);
+                {% elif p.rol == 'director_regional' %}background:linear-gradient(135deg,#166534,#22c55e);
+                {% elif p.rol == 'agente' %}background:linear-gradient(135deg,#9a3412,#f97316);
+                {% elif p.rol == 'cliente' %}background:linear-gradient(135deg,#7c3aed,#a78bfa);
+                {% else %}background:linear-gradient(135deg,#6b7280,#9ca3af);
+                {% endif %}
+            ">
+                {{ p.user.first_name|default:p.user.username|truncatechars:1|upper }}
+            </div>
+            <div style="flex:1; min-width:0;">
+                <div class="profile-name">{{ p.user.get_full_name|default:p.user.username }}</div>
+                <div class="profile-username">@{{ p.user.username }}</div>
+            </div>
+            <span class="status-dot {% if p.user.is_active %}active{% else %}inactive{% endif %}" title="{% if p.user.is_active %}Activo{% else %}Inactivo{% endif %}"></span>
+        </div>
+
+        <span class="profile-role {{ p.rol }}">
+            {% if p.rol == 'superadmin' %}<i class="fa-solid fa-crown" style="font-size:9px;"></i>
+            {% elif p.rol == 'admin_pqrs' %}<i class="fa-solid fa-shield-halved" style="font-size:9px;"></i>
+            {% elif p.rol == 'director_regional' %}<i class="fa-solid fa-map-location-dot" style="font-size:9px;"></i>
+            {% elif p.rol == 'agente' %}<i class="fa-solid fa-eye" style="font-size:9px;"></i>
+            {% elif p.rol == 'cliente' %}<i class="fa-solid fa-hospital-user" style="font-size:9px;"></i>
+            {% endif %}
+            {{ p.get_rol_display }}
+        </span>
+
+        <div class="profile-info">
+            <div class="profile-info-row">
+                <i class="fa-solid fa-envelope"></i>
+                <span>{{ p.user.email|default:"Sin email" }}</span>
+            </div>
+            {% if p.telefono %}
+            <div class="profile-info-row">
+                <i class="fa-solid fa-phone"></i>
+                <span>{{ p.telefono }}</span>
+            </div>
+            {% endif %}
+            {% if p.regional %}
+            <div class="profile-info-row">
+                <i class="fa-solid fa-map-pin"></i>
+                <span>{{ p.get_regional_display }}</span>
+            </div>
+            {% endif %}
+            {% if p.cliente %}
+            <div class="profile-info-row">
+                <i class="fa-solid fa-hospital"></i>
+                <span>{{ p.cliente.nombre|truncatechars:30 }}</span>
+            </div>
+            {% endif %}
+            <div class="profile-info-row">
+                <i class="fa-regular fa-calendar"></i>
+                <span>Desde {{ p.user.date_joined|date:"d M Y" }}</span>
+            </div>
+        </div>
+
+        <div class="profile-actions">
+            <a href="{% url 'consola_perfil_detalle' p.user.id %}" class="btn-view">
+                <i class="fa-solid fa-pen-to-square"></i> Ver / Editar
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div style="grid-column:1/-1; padding:80px 40px; text-align:center; color:var(--text-faint);">
+        <i class="fa-solid fa-users" style="font-size:48px; margin-bottom:16px; display:block; color:var(--border);"></i>
+        <p style="font-size:14px;">No se encontraron perfiles{% if q %} para "{{ q }}"{% endif %}.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

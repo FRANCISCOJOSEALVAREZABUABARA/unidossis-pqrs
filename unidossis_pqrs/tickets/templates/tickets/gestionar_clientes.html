@@ -1,5 +1,6 @@
 {% extends "tickets/base_admin.html" %}
 {% load static %}
+{% comment %}F-08/F-09 · GESTIONAR-CLIENTES — Consola de clientes y usuarios internos{% endcomment %}
 
 {% block title %}Consola de Administración | UNIDOSSIS{% endblock %}
 
@@ -351,6 +352,7 @@
     </div>
     </div><!-- /panel-usuarios -->
 
+{% include "tickets/_form_footer.html" %}
 {% endblock %}
 
 {% block page_js %}

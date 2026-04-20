@@ -31,6 +31,7 @@ urlpatterns = [
     path('exportar/excel/', views.exportar_excel_view, name='exportar_excel'),
 
     # ─── Encuesta CSAT ───────────────────────────────────────
+    path('encuesta/preview/', views.encuesta_csat_preview, name='encuesta_csat_preview'),
     path('encuesta/<uuid:token>/', views.encuesta_csat_view, name='encuesta_csat'),
 
     # ─── APIs AJAX ───────────────────────────────────────────
@@ -60,4 +61,21 @@ urlpatterns = [
 
     # ─── Health Check ────────────────────────────────────────
     path('health/', views.health_check, name='health_check'),
+
+    # ─── Consola Central de Administración ───────────────────
+    path('consola/', views.consola_central_view, name='consola_central'),
+    path('consola/tablas/<str:tabla>/', views.consola_tabla_view, name='consola_tabla'),
+    path('consola/permisos/', views.consola_permisos_view, name='consola_permisos'),
+    path('consola/perfiles/', views.consola_perfiles_view, name='consola_perfiles'),
+    path('consola/perfil/<int:user_id>/', views.consola_perfil_detalle_view, name='consola_perfil_detalle'),
+    path('consola/auditoria/', views.consola_auditoria_view, name='consola_auditoria'),
+    path('consola/inventario/', views.consola_inventario_view, name='consola_inventario'),
+    path('consola/api/inventario/guardar/', views.api_inventario_guardar, name='api_inventario_guardar'),
+    path('consola/api/inventario/eliminar/<int:pk>/', views.api_inventario_eliminar, name='api_inventario_eliminar'),
+    # APIs AJAX de la Consola
+    path('consola/api/tabla/<str:tabla>/crear/', views.api_consola_crear, name='api_consola_crear'),
+    path('consola/api/tabla/<str:tabla>/editar/<int:pk>/', views.api_consola_editar, name='api_consola_editar'),
+    path('consola/api/tabla/<str:tabla>/eliminar/<int:pk>/', views.api_consola_eliminar, name='api_consola_eliminar'),
+    path('consola/api/permisos/guardar/', views.api_consola_permisos_guardar, name='api_consola_permisos_guardar'),
+    path('consola/api/permisos/reset/', views.api_consola_permisos_reset, name='api_consola_permisos_reset'),
 ]

@@ -1,0 +1,211 @@
+{% comment %}
+  _form_footer.html — Footer de Metadatos de Formulario
+  ======================================================
+  Incluir en la parte inferior de cada formulario:
+    {% include "tickets/_form_footer.html" %}
+
+  Variables requeridas (inyectadas por context_processors.form_metadata):
+    - form_meta         → dict con code, name, full_name, version  (o None)
+    - response_time_ms  → int con el tiempo del servidor en ms      (o None)
+{% endcomment %}
+
+{% if form_meta %}
+<div class="form-meta-footer" id="form-meta-footer" role="contentinfo" aria-label="Metadatos del formulario">
+    <!-- Código del Formulario -->
+    <div class="fmf-badge fmf-code" title="{{ form_meta.full_name }}">
+        <span class="fmf-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+        </span>
+        <span class="fmf-label">{{ form_meta.code }}</span>
+        <span class="fmf-sep">·</span>
+        <span class="fmf-value">{{ form_meta.name }}</span>
+    </div>
+
+    <!-- Versión -->
+    <div class="fmf-badge fmf-version" title="Versión del formulario">
+        <span class="fmf-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        </span>
+        <span class="fmf-value">{{ form_meta.version }}</span>
+    </div>
+
+    <!-- Tiempo de Respuesta del Servidor -->
+    {% if response_time_ms is not None %}
+    <div class="fmf-badge fmf-timing {% if response_time_ms < 200 %}fmf-fast{% elif response_time_ms < 800 %}fmf-ok{% else %}fmf-slow{% endif %}"
+         title="Tiempo de procesamiento del servidor para esta solicitud">
+        <span class="fmf-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="2" x2="12" y2="6"></line>
+                <line x1="12" y1="18" x2="12" y2="22"></line>
+                <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                <line x1="2" y1="12" x2="6" y2="12"></line>
+                <line x1="18" y1="12" x2="22" y2="12"></line>
+            </svg>
+        </span>
+        <span class="fmf-label">Respuesta servidor</span>
+        <span class="fmf-sep">↩</span>
+        <span class="fmf-value fmf-ms" id="fmf-ms-server">{{ response_time_ms }} ms</span>
+    </div>
+    {% endif %}
+
+    <!-- Tiempo de carga total (lado cliente, medido con JS) -->
+    <div class="fmf-badge fmf-client-timing" title="Tiempo total de carga en el navegador (incluyendo assets)">
+        <span class="fmf-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+        </span>
+        <span class="fmf-label">Carga total</span>
+        <span class="fmf-sep">↩</span>
+        <span class="fmf-value fmf-ms" id="fmf-ms-client">— ms</span>
+    </div>
+</div>
+
+<style>
+/* ── Form Meta Footer — Estilos ────────────────────────────── */
+.form-meta-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 18px;
+    margin-top: 20px;
+    background: rgba(15, 23, 42, 0.03);
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+    border-radius: 0 0 12px 12px;
+    font-family: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    user-select: none;
+}
+
+.fmf-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    border: 1px solid transparent;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+}
+
+.fmf-badge:hover { opacity: 0.75; }
+
+/* Código del formulario */
+.fmf-code {
+    background: rgba(37, 99, 235, 0.06);
+    color: #1d4ed8;
+    border-color: rgba(37, 99, 235, 0.15);
+}
+
+/* Versión */
+.fmf-version {
+    background: rgba(139, 92, 246, 0.07);
+    color: #6d28d9;
+    border-color: rgba(139, 92, 246, 0.15);
+}
+
+/* Timing servidor: semáforo de rendimiento */
+.fmf-timing {
+    border-color: rgba(0,0,0,0.08);
+}
+.fmf-fast {
+    background: rgba(16, 185, 129, 0.08);
+    color: #065f46;
+}
+.fmf-ok {
+    background: rgba(245, 158, 11, 0.08);
+    color: #92400e;
+}
+.fmf-slow {
+    background: rgba(239, 68, 68, 0.08);
+    color: #991b1b;
+}
+
+/* Timing cliente */
+.fmf-client-timing {
+    background: rgba(100, 116, 139, 0.06);
+    color: #475569;
+    border-color: rgba(100, 116, 139, 0.12);
+}
+
+.fmf-icon {
+    display: flex;
+    align-items: center;
+    opacity: 0.7;
+}
+
+.fmf-label {
+    opacity: 0.75;
+    font-weight: 500;
+}
+
+.fmf-sep {
+    opacity: 0.4;
+    font-weight: 400;
+    margin: 0 1px;
+}
+
+.fmf-value {
+    font-weight: 700;
+}
+
+.fmf-ms {
+    font-variant-numeric: tabular-nums;
+    min-width: 44px;
+    text-align: right;
+}
+
+/* Responsive: en móviles ocultar labels y separadores secundarios */
+@media (max-width: 480px) {
+    .fmf-label { display: none; }
+    .fmf-sep   { display: none; }
+    .form-meta-footer { padding: 8px 12px; gap: 4px; }
+    .fmf-badge { padding: 3px 8px; font-size: 10px; }
+}
+</style>
+
+<script>
+(function() {
+    // Medir el tiempo total de carga del navegador (DOMContentLoaded → ahora)
+    function actualizarTimingCliente() {
+        var el = document.getElementById('fmf-ms-client');
+        if (!el) return;
+
+        if (window.performance && window.performance.timing) {
+            var t = window.performance.timing;
+            var domReady = t.domContentLoadedEventEnd - t.navigationStart;
+            if (domReady > 0) {
+                el.textContent = domReady + ' ms';
+                // Aplicar color semáforo
+                var badge = el.closest('.fmf-client-timing');
+                if (badge) {
+                    badge.classList.remove('fmf-fast', 'fmf-ok', 'fmf-slow');
+                    if (domReady < 500) badge.classList.add('fmf-fast');
+                    else if (domReady < 2000) badge.classList.add('fmf-ok');
+                    else badge.classList.add('fmf-slow');
+                }
+            }
+        }
+    }
+
+    // Ejecutar después de que el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(actualizarTimingCliente, 50);
+        });
+    } else {
+        setTimeout(actualizarTimingCliente, 50);
+    }
+})();
+</script>
+{% endif %}

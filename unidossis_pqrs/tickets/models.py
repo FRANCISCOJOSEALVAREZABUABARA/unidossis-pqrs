@@ -272,6 +272,7 @@ class PerfilUsuario(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, help_text="Solo para usuarios de tipo Cliente")
     debe_cambiar_password = models.BooleanField(default=False, verbose_name="Debe cambiar contraseña",
         help_text="Si está activo, se forzará al usuario a cambiar su contraseña en el próximo login")
+    notas_admin = models.TextField(blank=True, null=True, verbose_name="Notas internas del administrador")
 
     def __str__(self):
         return f"{self.user.username} - {self.get_rol_display()}"
@@ -279,6 +280,40 @@ class PerfilUsuario(models.Model):
     class Meta:
         verbose_name = "Perfil de Usuario"
         verbose_name_plural = "Perfiles de Usuario"
+
+
+class PermisoRol(models.Model):
+    """Permisos granulares por rol del sistema — Consola Central."""
+    PERMISO_CHOICES = [
+        ('ver_dashboard', 'Ver Dashboard'),
+        ('crear_ticket', 'Crear Ticket Manual'),
+        ('editar_ticket', 'Editar Tickets'),
+        ('eliminar_ticket', 'Eliminar Tickets'),
+        ('responder_ticket', 'Responder Tickets'),
+        ('ver_reportes', 'Ver Reportes'),
+        ('exportar_excel', 'Exportar a Excel'),
+        ('gestionar_clientes', 'Gestionar Clientes'),
+        ('gestionar_usuarios', 'Gestionar Usuarios Internos'),
+        ('configurar_sla', 'Configurar SLA'),
+        ('ver_monitoreo', 'Ver Monitoreo del Sistema'),
+        ('ver_auditoria', 'Ver Logs de Auditoría'),
+        ('acceso_consola', 'Acceder a la Consola Central'),
+        ('ver_analisis_ia', 'Ver Análisis de IA'),
+        ('reclasificar_ia', 'Reclasificar con IA'),
+    ]
+
+    rol = models.CharField(max_length=30, choices=PerfilUsuario.ROL_CHOICES)
+    permiso = models.CharField(max_length=50, choices=PERMISO_CHOICES)
+    permitido = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('rol', 'permiso')
+        verbose_name = "Permiso por Rol"
+        verbose_name_plural = "Permisos por Rol"
+
+    def __str__(self):
+        estado = "✅" if self.permitido else "❌"
+        return f"{estado} {self.get_rol_display()} → {self.get_permiso_display()}"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -483,4 +518,31 @@ class SolicitudResetPassword(models.Model):
 
     def __str__(self):
         return f"Reset para {self.user.username} — {self.get_estado_display()}"
+
+
+class RegistroComponente(models.Model):
+    """Registro de formularios, vistas y módulos del sistema para auditoría e inventario."""
+    TIPO_CHOICES = [
+        ('formulario', 'Formulario'),
+        ('vista', 'Vista / Dashboard'),
+    ]
+    code = models.CharField(max_length=10, unique=True, verbose_name="Código (ej: F-01)")
+    name = models.CharField(max_length=50, verbose_name="Identificador técnico")
+    full_name = models.CharField(max_length=120, verbose_name="Nombre completo")
+    version = models.CharField(max_length=20, default='v1.0.0')
+    url_name = models.CharField(max_length=80, blank=True, verbose_name="URL name (urls.py)")
+    tablas = models.CharField(max_length=250, blank=True, verbose_name="Tablas conectadas (CSV)")
+    descripcion = models.TextField(blank=True, verbose_name="Descripción funcional")
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='formulario')
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Registro de Componente"
+        verbose_name_plural = "Registro de Componentes"
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} — {self.full_name}"
 

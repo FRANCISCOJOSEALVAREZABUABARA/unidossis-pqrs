@@ -1,10 +1,11 @@
 {% load static %}
+{% comment %}F-11 · ENCUESTA-CSAT — Encuesta de satisfacción{% endcomment %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Encuesta de Satisfacción — PQRS #{{ encuesta.ticket.ticket_id }} | UNIDOSSIS</title>
+    <title>Encuesta de Satisfacción{% if encuesta %} — PQRS #{{ encuesta.ticket.ticket_id }}{% endif %} | UNIDOSSIS</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -47,16 +48,21 @@
 </head>
 <body>
 <div class="card">
+    {% if preview_mode %}
+    <div style="background:linear-gradient(135deg,#fef3c7,#fde68a); border-radius:12px; padding:12px 18px; margin-bottom:20px; font-size:12px; font-weight:700; color:#92400e; display:flex; align-items:center; gap:8px;">
+        <i class="fa-solid fa-eye"></i> MODO VISTA PREVIA — Este formulario no enviará datos
+    </div>
+    {% endif %}
     <img src="{% static 'tickets/img/LOGOSVG.svg' %}" alt="UNIDOSSIS" class="logo">
-    <div class="ticket-badge">Caso #{{ encuesta.ticket.ticket_id }}</div>
+    <div class="ticket-badge">Caso #{% if encuesta %}{{ encuesta.ticket.ticket_id }}{% else %}PQRS-DEMO{% endif %}</div>
     <h1>¿Cómo califica nuestra atención?</h1>
     <p class="subtitle">Hemos dado respuesta a su PQRS. Su opinión nos ayuda a mejorar continuamente el servicio.</p>
 
     <div class="asunto">
-        <strong>Asunto:</strong> {{ encuesta.ticket.asunto }}
+        <strong>Asunto:</strong> {% if encuesta %}{{ encuesta.ticket.asunto }}{% else %}Ejemplo de asunto del ticket para vista previa del formulario de encuesta CSAT{% endif %}
     </div>
 
-    <form method="POST" id="csat-form">
+    <form method="{% if preview_mode %}GET{% else %}POST{% endif %}" id="csat-form" {% if preview_mode %}onsubmit="alert('Modo preview — no se envían datos'); return false;"{% endif %}>
         {% csrf_token %}
 
         <div class="stars-container">
@@ -90,6 +96,7 @@
         </button>
         <p class="privacy-note">Su respuesta es confidencial y solo se usa para mejorar nuestro servicio.</p>
     </form>
+    {% include "tickets/_form_footer.html" %}
 </div>
 
 <script>

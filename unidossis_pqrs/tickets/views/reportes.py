@@ -342,7 +342,7 @@ def encuesta_csat_view(request, token):
 
         ticket = encuesta.ticket
 
-        if puntuacion >= 4:
+        if puntuacion >= 3:
             # Satisfecho → cierre definitivo
             encuesta.estado = 'satisfecho'
             ticket.estado = 'resuelto'
@@ -393,3 +393,11 @@ def encuesta_csat_view(request, token):
     return render(request, 'tickets/encuesta_csat.html', {'encuesta': encuesta})
 
 
+@login_required
+@rol_requerido('superadmin', 'admin_pqrs')
+def encuesta_csat_preview(request):
+    """Vista de preview del formulario de encuesta CSAT — sin datos reales."""
+    return render(request, 'tickets/encuesta_csat.html', {
+        'encuesta': None,
+        'preview_mode': True,
+    })

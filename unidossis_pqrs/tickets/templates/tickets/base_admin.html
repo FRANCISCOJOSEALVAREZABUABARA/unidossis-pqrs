@@ -115,11 +115,11 @@
                 </a>
                 {% endif %}
                 {% if perfil.rol == 'superadmin' %}
-                <a href="/admin/" class="settings-popover-item">
+                <a href="{% url 'consola_central' %}" class="settings-popover-item">
                     <div class="settings-popover-icon" style="background:#fef3c7; color:#d97706;">
-                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                        <i class="fa-solid fa-solar-panel"></i>
                     </div>
-                    <span>Admin Django</span>
+                    <span>Consola Central</span>
                 </a>
                 <a href="{% url 'monitoreo' %}" class="settings-popover-item">
                     <div class="settings-popover-icon" style="background:#ede9fe; color:#7c3aed;">

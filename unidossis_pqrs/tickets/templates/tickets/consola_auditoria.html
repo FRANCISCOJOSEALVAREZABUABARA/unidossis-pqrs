@@ -1,0 +1,321 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+
+{% block title %}Auditoría — Consola Central | UNIDOSSIS{% endblock %}
+
+{% block content %}
+<style>
+    .breadcrumb { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; color:var(--text-faint); }
+    .breadcrumb a { color:var(--accent); font-weight:600; }
+    .breadcrumb a:hover { text-decoration:underline; }
+    .audit-tabs { display:flex; gap:4px; background:var(--border-light); padding:4px; border-radius:14px; margin-bottom:20px; width:fit-content; }
+    .audit-tab {
+        padding:9px 20px; border:none; background:transparent; border-radius:10px;
+        font-size:12px; font-weight:600; color:var(--text-muted); cursor:pointer;
+        transition:all 0.25s ease; display:flex; align-items:center; gap:7px; font-family:inherit;
+        text-decoration:none;
+    }
+    .audit-tab:hover { color:var(--text-main); background:rgba(255,255,255,0.5); }
+    .audit-tab.active { background:white; color:var(--accent); box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+    .filter-row { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:flex-end; }
+    .filter-group { display:flex; flex-direction:column; gap:4px; }
+    .filter-group label { font-size:10px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.5px; }
+    .filter-group input, .filter-group select {
+        padding:8px 12px; border:1.5px solid var(--border); border-radius:10px;
+        font-size:12px; font-family:inherit; outline:none; transition:border-color 0.2s;
+    }
+    .filter-group input:focus, .filter-group select:focus { border-color:var(--accent); }
+    .log-table { width:100%; border-collapse:collapse; }
+    .log-table th { padding:12px 20px; text-align:left; font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; background:var(--bg); }
+    .log-table td { padding:12px 20px; border-top:1px solid var(--border-light); font-size:12.5px; vertical-align:middle; }
+    .log-table tr { transition:background 0.15s; }
+    .log-table tbody tr:hover { background:var(--bg); }
+    .log-tag {
+        display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px;
+        font-size:10px; font-weight:700;
+    }
+    .log-tag.consola { background:#e0e7ff; color:#4338ca; }
+    .log-tag.ticket { background:#dbeafe; color:#1e40af; }
+    .log-tag.login { background:#fef3c7; color:#92400e; }
+    .log-tag.sistema { background:#f1f5f9; color:#475569; }
+    .pagination-bar { padding:14px 28px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:#fafafa; border-radius:0 0 20px 20px; }
+    .page-btn { padding:6px 12px; border:1px solid var(--border); border-radius:8px; background:white; font-size:12px; cursor:pointer; font-family:inherit; transition:all 0.2s; text-decoration:none; color:inherit; }
+    .page-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .page-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
+    .login-status { display:inline-flex; align-items:center; gap:4px; font-weight:700; font-size:11px; }
+    .login-status.ok { color:#10b981; }
+    .login-status.fail { color:#ef4444; }
+</style>
+
+<div class="breadcrumb">
+    <a href="{% url 'dashboard' %}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+    <a href="{% url 'consola_central' %}">Consola Central</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+    <span>Auditoría</span>
+</div>
+
+<div class="page-header">
+    <div style="display:flex; align-items:center; gap:14px;">
+        <div style="width:48px; height:48px; background:#fef3c7; border-radius:14px; display:flex; align-items:center; justify-content:center;">
+            <i class="fa-solid fa-scroll" style="color:#d97706; font-size:20px;"></i>
+        </div>
+        <div>
+            <h1 style="font-size:22px;">Centro de Auditoría</h1>
+            <p>Historial completo de actividad, accesos y eventos del sistema</p>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="audit-tabs">
+    <a href="{% url 'consola_auditoria' %}?tab=actividad" class="audit-tab {% if tab == 'actividad' %}active{% endif %}">
+        <i class="fa-solid fa-clock-rotate-left"></i> Actividad
+        <span style="background:var(--bg); padding:2px 7px; border-radius:6px; font-size:10px; font-weight:800;">{{ total_logs }}</span>
+    </a>
+    <a href="{% url 'consola_auditoria' %}?tab=logins" class="audit-tab {% if tab == 'logins' %}active{% endif %}">
+        <i class="fa-solid fa-fingerprint"></i> Intentos de Login
+    </a>
+    <a href="{% url 'consola_auditoria' %}?tab=resets" class="audit-tab {% if tab == 'resets' %}active{% endif %}">
+        <i class="fa-solid fa-key"></i> Resets de Contraseña
+    </a>
+</div>
+
+<!-- ═══ TAB: ACTIVIDAD ═══ -->
+{% if tab == 'actividad' %}
+<div class="card">
+    <!-- Filtros -->
+    <div style="padding:16px 24px; border-bottom:1px solid var(--border);">
+        <form method="GET" class="filter-row">
+            <input type="hidden" name="tab" value="actividad">
+            <div class="filter-group" style="flex:1; max-width:280px;">
+                <label><i class="fa-solid fa-magnifying-glass"></i> Buscar</label>
+                <input type="text" name="q" value="{{ q }}" placeholder="Buscar en acciones...">
+            </div>
+            <div class="filter-group">
+                <label><i class="fa-solid fa-user"></i> Usuario</label>
+                <select name="usuario">
+                    <option value="">Todos</option>
+                    {% for u in usuarios_con_logs %}
+                    <option value="{{ u.id }}" {% if usuario_filtro == u.id|stringformat:"s" %}selected{% endif %}>
+                        {{ u.get_full_name|default:u.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Desde</label>
+                <input type="date" name="desde" value="{{ fecha_desde }}">
+            </div>
+            <div class="filter-group">
+                <label>Hasta</label>
+                <input type="date" name="hasta" value="{{ fecha_hasta }}">
+            </div>
+            <button type="submit" class="btn btn-outline btn-sm" style="gap:6px; align-self:flex-end;">
+                <i class="fa-solid fa-filter"></i> Aplicar
+            </button>
+            {% if q or usuario_filtro or fecha_desde or fecha_hasta %}
+            <a href="{% url 'consola_auditoria' %}?tab=actividad" class="btn btn-outline btn-sm" style="gap:6px; align-self:flex-end; border-color:var(--text-faint); color:var(--text-faint);">
+                <i class="fa-solid fa-xmark"></i> Limpiar
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th style="width:160px;">Fecha</th>
+                    <th style="width:140px;">Usuario</th>
+                    <th>Acción</th>
+                    <th style="width:100px;">Ticket</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs_page %}
+                <tr>
+                    <td style="white-space:nowrap;">
+                        <div style="font-weight:600; font-size:12px;">{{ log.fecha|date:"d/m/Y" }}</div>
+                        <div style="font-size:10px; color:var(--text-faint);">{{ log.fecha|date:"H:i:s" }}</div>
+                    </td>
+                    <td>
+                        {% if log.usuario %}
+                        <a href="{% url 'consola_perfil_detalle' log.usuario.id %}" style="color:var(--accent); font-weight:600; font-size:12px;">
+                            {{ log.usuario.get_full_name|default:log.usuario.username }}
+                        </a>
+                        {% else %}
+                        <span style="color:var(--text-faint); font-style:italic;">Sistema</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if '[Consola]' in log.accion %}
+                        <span class="log-tag consola"><i class="fa-solid fa-solar-panel"></i> Consola</span>
+                        {% elif 'ticket' in log.accion|lower %}
+                        <span class="log-tag ticket"><i class="fa-solid fa-ticket"></i> Ticket</span>
+                        {% endif %}
+                        <span style="margin-left:4px;">{{ log.accion }}</span>
+                    </td>
+                    <td>
+                        {% if log.ticket %}
+                        <a href="{% url 'ticket_detail' log.ticket.ticket_id %}" style="font-family:monospace; font-size:11px; color:var(--accent); font-weight:700;">
+                            {{ log.ticket.ticket_id }}
+                        </a>
+                        {% else %}
+                        <span style="color:var(--text-faint);">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="padding:60px 40px; text-align:center; color:var(--text-faint);">
+                        <i class="fa-solid fa-inbox" style="font-size:36px; margin-bottom:12px; display:block; color:var(--border);"></i>
+                        <p>No hay registros de actividad{% if q %} que coincidan con la búsqueda{% endif %}.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if logs_page.has_other_pages %}
+    <div class="pagination-bar">
+        <span style="font-size:12px; color:var(--text-muted);">
+            Página {{ logs_page.number }} de {{ logs_page.paginator.num_pages }} · {{ total_logs }} registros
+        </span>
+        <div style="display:flex; gap:4px;">
+            {% if logs_page.has_previous %}
+            <a href="?tab=actividad&page={{ logs_page.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if usuario_filtro %}&usuario={{ usuario_filtro }}{% endif %}{% if fecha_desde %}&desde={{ fecha_desde }}{% endif %}{% if fecha_hasta %}&hasta={{ fecha_hasta }}{% endif %}" class="page-btn">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            {% if logs_page.has_next %}
+            <a href="?tab=actividad&page={{ logs_page.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if usuario_filtro %}&usuario={{ usuario_filtro }}{% endif %}{% if fecha_desde %}&desde={{ fecha_desde }}{% endif %}{% if fecha_hasta %}&hasta={{ fecha_hasta }}{% endif %}" class="page-btn">
+                <i class="fa-solid fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ═══ TAB: INTENTOS DE LOGIN ═══ -->
+{% if tab == 'logins' %}
+<div class="card">
+    <div style="overflow-x:auto;">
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th style="width:160px;">Fecha</th>
+                    <th>Usuario</th>
+                    <th>IP</th>
+                    <th style="width:100px; text-align:center;">Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in intentos_page %}
+                <tr>
+                    <td style="white-space:nowrap;">
+                        <div style="font-weight:600; font-size:12px;">{{ i.fecha|date:"d/m/Y" }}</div>
+                        <div style="font-size:10px; color:var(--text-faint);">{{ i.fecha|date:"H:i:s" }}</div>
+                    </td>
+                    <td>
+                        <span style="font-family:monospace; font-size:12px; font-weight:600;">{{ i.username }}</span>
+                    </td>
+                    <td>
+                        <span style="font-family:monospace; font-size:12px; color:var(--text-muted);">{{ i.ip }}</span>
+                    </td>
+                    <td style="text-align:center;">
+                        {% if i.exitoso %}
+                        <span class="login-status ok"><i class="fa-solid fa-circle-check"></i> Exitoso</span>
+                        {% else %}
+                        <span class="login-status fail"><i class="fa-solid fa-circle-xmark"></i> Fallido</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="padding:60px 40px; text-align:center; color:var(--text-faint);">
+                        <i class="fa-solid fa-fingerprint" style="font-size:36px; margin-bottom:12px; display:block; color:var(--border);"></i>
+                        <p>No hay intentos de login registrados.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if intentos_page.has_other_pages %}
+    <div class="pagination-bar">
+        <span style="font-size:12px; color:var(--text-muted);">Página {{ intentos_page.number }} de {{ intentos_page.paginator.num_pages }}</span>
+        <div style="display:flex; gap:4px;">
+            {% if intentos_page.has_previous %}
+            <a href="?tab=logins&page_intentos={{ intentos_page.previous_page_number }}" class="page-btn"><i class="fa-solid fa-chevron-left"></i></a>
+            {% endif %}
+            {% if intentos_page.has_next %}
+            <a href="?tab=logins&page_intentos={{ intentos_page.next_page_number }}" class="page-btn"><i class="fa-solid fa-chevron-right"></i></a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ═══ TAB: RESETS DE CONTRASEÑA ═══ -->
+{% if tab == 'resets' %}
+<div class="card">
+    <div style="overflow-x:auto;">
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th>Fecha Solicitud</th>
+                    <th>Usuario</th>
+                    <th>Estado</th>
+                    <th>Resuelta por</th>
+                    <th>Fecha Resolución</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in resets %}
+                <tr>
+                    <td style="white-space:nowrap;">
+                        <div style="font-weight:600; font-size:12px;">{{ r.fecha_solicitud|date:"d/m/Y H:i" }}</div>
+                    </td>
+                    <td>
+                        {% if r.user %}
+                        <a href="{% url 'consola_perfil_detalle' r.user.id %}" style="color:var(--accent); font-weight:600; font-size:12px;">
+                            {{ r.user.get_full_name|default:r.user.username }}
+                        </a>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if r.estado == 'pendiente' %}
+                        <span style="background:#fef3c7; color:#92400e; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700;">Pendiente</span>
+                        {% elif r.estado == 'aprobada' %}
+                        <span style="background:#d1fae5; color:#065f46; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700;">Aprobada</span>
+                        {% else %}
+                        <span style="background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700;">Rechazada</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px; color:var(--text-muted);">
+                        {{ r.resuelta_por.get_full_name|default:"—" }}
+                    </td>
+                    <td style="font-size:12px; color:var(--text-muted);">
+                        {{ r.fecha_resolucion|date:"d/m/Y H:i"|default:"—" }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="padding:60px 40px; text-align:center; color:var(--text-faint);">
+                        <i class="fa-solid fa-key" style="font-size:36px; margin-bottom:12px; display:block; color:var(--border);"></i>
+                        <p>No hay solicitudes de reset registradas.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

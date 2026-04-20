@@ -8,3 +8,5 @@ from .portal import *
 from .apis import *
 from .reportes import *
 from .monitoreo import *
+from .consola import *
+

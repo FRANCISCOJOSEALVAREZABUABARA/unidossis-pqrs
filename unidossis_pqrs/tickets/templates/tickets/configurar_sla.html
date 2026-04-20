@@ -1,5 +1,6 @@
 {% extends "tickets/base_admin.html" %}
 {% load static %}
+{% comment %}F-10 · CONFIG-SLA — Configuración de SLA y alertas{% endcomment %}
 
 {% block title %}Configuración SLA | UNIDOSSIS PQRS{% endblock %}
 
@@ -145,6 +146,7 @@
             {% endif %}
         </div>
     </div>
+{% include "tickets/_form_footer.html" %}
 {% endblock %}
 
 {% block page_js %}

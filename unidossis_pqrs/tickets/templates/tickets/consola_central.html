@@ -1,0 +1,238 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+
+{% block title %}Consola Central | UNIDOSSIS{% endblock %}
+
+{% block content %}
+<style>
+    .console-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 28px; }
+    .console-kpi {
+        background: white; padding: 24px; border-radius: 20px;
+        border: 1px solid rgba(30,58,138,0.08); box-shadow: var(--shadow-sm);
+        position: relative; overflow: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .console-kpi::before { content:''; position:absolute; top:0; left:0; width:100%; height:3px; opacity:0.7; }
+    .console-kpi:hover { transform: translateY(-4px); box-shadow: 0 12px 25px -5px rgba(0,0,0,0.08); }
+    .console-kpi .kpi-row { display:flex; align-items:center; gap:14px; }
+    .console-kpi .kpi-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .console-kpi .kpi-num { font-size:28px; font-weight:800; letter-spacing:-1px; line-height:1; }
+    .console-kpi .kpi-label { font-size:12px; color:var(--text-muted); font-weight:600; margin-top:4px; }
+
+    .module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .module-card {
+        background: white; border-radius: 18px; padding: 22px 24px;
+        border: 1px solid rgba(30,58,138,0.08); cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4,0,0.2,1); text-decoration: none; color: inherit;
+        display: flex; align-items: center; gap: 16px;
+    }
+    .module-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px -8px rgba(0,0,0,0.1); border-color: rgba(59,130,246,0.25); }
+    .module-card .mod-icon { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+    .module-card .mod-title { font-size:14px; font-weight:700; color:var(--primary); }
+    .module-card .mod-desc { font-size:11.5px; color:var(--text-muted); margin-top:3px; line-height:1.4; }
+    .module-card .mod-count { margin-left:auto; background:var(--bg); padding:6px 12px; border-radius:10px; font-size:16px; font-weight:800; color:var(--text-main); flex-shrink:0; }
+
+    .timeline-card { background:white; border-radius:20px; border:1px solid rgba(30,58,138,0.08); overflow:hidden; }
+    .timeline-header { padding:20px 28px; border-bottom:1px solid var(--border-light); display:flex; align-items:center; gap:12px; }
+    .timeline-header h2 { font-size:16px; font-weight:700; margin:0; }
+    .timeline-list { max-height:500px; overflow-y:auto; }
+    .timeline-item {
+        display: flex; gap: 14px; padding: 14px 28px;
+        border-bottom: 1px solid var(--border-light); transition: background 0.15s;
+    }
+    .timeline-item:hover { background: var(--bg); }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); margin-top:6px; flex-shrink:0; }
+    .timeline-dot.system { background: var(--purple); }
+    .timeline-dot.warn { background: var(--warning); }
+    .timeline-content { flex:1; min-width:0; }
+    .timeline-action { font-size:13px; color:var(--text-main); font-weight:500; line-height:1.4; }
+    .timeline-meta { font-size:11px; color:var(--text-faint); margin-top:3px; display:flex; gap:12px; align-items:center; }
+
+    .breadcrumb { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; color:var(--text-faint); }
+    .breadcrumb a { color:var(--accent); font-weight:600; }
+    .breadcrumb a:hover { text-decoration:underline; }
+
+    .alert-cards { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:24px; }
+    .alert-mini {
+        padding:16px 20px; border-radius:14px; display:flex; align-items:center; gap:12px;
+        font-size:13px; font-weight:600; border:1px solid;
+    }
+    .alert-mini i { font-size:16px; }
+    .alert-mini .alert-num { margin-left:auto; font-size:20px; font-weight:800; }
+    .console-kpi a { text-decoration:none; color:inherit; display:block; }
+</style>
+
+<div class="breadcrumb">
+    <a href="{% url 'dashboard' %}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+    <span>Consola Central</span>
+</div>
+
+<div class="page-header">
+    <div>
+        <h1><i class="fa-solid fa-solar-panel" style="color:var(--accent); margin-right:8px;"></i>Consola Central</h1>
+        <p>Panel de administración del sistema UNIDOSSIS PQRS</p>
+    </div>
+</div>
+
+<!-- ═══ KPIs ═══ -->
+<div class="console-grid">
+    <a href="{% url 'consola_perfiles' %}" class="console-kpi" title="Ver todos los usuarios">
+        <div style="position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,#3b82f6,#60a5fa);"></div>
+        <div class="kpi-row">
+            <div class="kpi-icon" style="background:#eff6ff; color:#3b82f6;"><i class="fa-solid fa-users"></i></div>
+            <div>
+                <div class="kpi-num" style="color:#3b82f6;">{{ total_usuarios }}</div>
+                <div class="kpi-label">Usuarios Activos</div>
+            </div>
+        </div>
+    </a>
+    <a href="{% url 'gestionar_clientes' %}" class="console-kpi" title="Ver gestión de clientes">
+        <div style="position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,#10b981,#34d399);"></div>
+        <div class="kpi-row">
+            <div class="kpi-icon" style="background:#d1fae5; color:#10b981;"><i class="fa-solid fa-hospital"></i></div>
+            <div>
+                <div class="kpi-num" style="color:#10b981;">{{ total_clientes }}</div>
+                <div class="kpi-label">Clientes Activos</div>
+            </div>
+        </div>
+    </a>
+    <a href="{% url 'dashboard' %}" class="console-kpi" title="Ver dashboard de tickets">
+        <div style="position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div>
+        <div class="kpi-row">
+            <div class="kpi-icon" style="background:#fef3c7; color:#f59e0b;"><i class="fa-solid fa-ticket"></i></div>
+            <div>
+                <div class="kpi-num" style="color:#f59e0b;">{{ tickets_abiertos }}</div>
+                <div class="kpi-label">Tickets Abiertos</div>
+            </div>
+        </div>
+    </a>
+    <a href="{% url 'consola_auditoria' %}?tab=logins" class="console-kpi" title="Ver intentos de login fallidos">
+        <div style="position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,#ef4444,#f87171);"></div>
+        <div class="kpi-row">
+            <div class="kpi-icon" style="background:#fee2e2; color:#ef4444;"><i class="fa-solid fa-shield-halved"></i></div>
+            <div>
+                <div class="kpi-num" style="color:#ef4444;">{{ intentos_fallidos_24h }}</div>
+                <div class="kpi-label">Intentos Fallidos (24h)</div>
+            </div>
+        </div>
+    </a>
+</div>
+
+<!-- ═══ Alertas rápidas ═══ -->
+{% if reset_pendientes > 0 or alertas_pendientes > 0 %}
+<div class="alert-cards">
+    {% if reset_pendientes > 0 %}
+    <a href="{% url 'consola_auditoria' %}?tab=resets" class="alert-mini" style="background:#fef3c7; border-color:#fde68a; color:#92400e; text-decoration:none;">
+        <i class="fa-solid fa-key"></i>
+        <span>Resets de contraseña pendientes</span>
+        <span class="alert-num">{{ reset_pendientes }}</span>
+    </a>
+    {% endif %}
+    {% if alertas_pendientes > 0 %}
+    <a href="{% url 'dashboard' %}" class="alert-mini" style="background:#fee2e2; border-color:#fecaca; color:#991b1b; text-decoration:none;">
+        <i class="fa-solid fa-bell"></i>
+        <span>Alertas SLA emitidas</span>
+        <span class="alert-num">{{ alertas_pendientes }}</span>
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ═══ MÓDULOS ═══ -->
+<div style="font-size:11px; font-weight:800; color:var(--text-faint); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; padding-left:4px;">
+    <i class="fa-solid fa-grip" style="margin-right:4px;"></i> Módulos de Administración
+</div>
+
+<div class="module-grid">
+    <!-- Tablas Maestras -->
+    {% for t in tablas_resumen %}
+    <a href="{% url 'consola_tabla' t.key %}" class="module-card">
+        <div class="mod-icon" style="background:{{ t.color_bg }}; color:{{ t.color }};"><i class="fa-solid {{ t.icono }}"></i></div>
+        <div>
+            <div class="mod-title">{{ t.titulo }}</div>
+            <div class="mod-desc">Gestionar catálogo</div>
+        </div>
+        <div class="mod-count">{{ t.count }}</div>
+    </a>
+    {% endfor %}
+
+    <!-- Permisos -->
+    <a href="{% url 'consola_permisos' %}" class="module-card">
+        <div class="mod-icon" style="background:#fce7f3; color:#db2777;"><i class="fa-solid fa-lock"></i></div>
+        <div>
+            <div class="mod-title">Permisos por Rol</div>
+            <div class="mod-desc">Matriz de acceso granular</div>
+        </div>
+        <div class="mod-count"><i class="fa-solid fa-table-cells" style="font-size:14px; color:var(--text-faint);"></i></div>
+    </a>
+
+    <!-- Perfiles -->
+    <a href="{% url 'consola_perfiles' %}" class="module-card">
+        <div class="mod-icon" style="background:#e0e7ff; color:#4f46e5;"><i class="fa-solid fa-id-card"></i></div>
+        <div>
+            <div class="mod-title">Perfiles de Usuario</div>
+            <div class="mod-desc">Directorio y personalización</div>
+        </div>
+        <div class="mod-count">{{ total_usuarios }}</div>
+    </a>
+
+    <!-- Auditoría -->
+    <a href="{% url 'consola_auditoria' %}" class="module-card">
+        <div class="mod-icon" style="background:#fef3c7; color:#d97706;"><i class="fa-solid fa-scroll"></i></div>
+        <div>
+            <div class="mod-title">Auditoría y Logs</div>
+            <div class="mod-desc">Timeline de actividad del sistema</div>
+        </div>
+        <div class="mod-count"><i class="fa-solid fa-arrow-right" style="font-size:14px; color:var(--text-faint);"></i></div>
+    <!-- Inventario de Componentes -->
+    <a href="{% url 'consola_inventario' %}" class="module-card">
+        <div class="mod-icon" style="background:#e0e7ff; color:#4f46e5;"><i class="fa-solid fa-barcode"></i></div>
+        <div>
+            <div class="mod-title">Registro de Componentes</div>
+            <div class="mod-desc">Inventario de formularios y vistas</div>
+        </div>
+        <div class="mod-count">{{ form_inventario|length }}</div>
+    </a>
+</div>
+
+<!-- ═══ ACTIVIDAD RECIENTE ═══ -->
+<div class="timeline-card">
+    <div class="timeline-header">
+        <div style="width:36px;height:36px;background:var(--accent-soft);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+            <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent);font-size:15px;"></i>
+        </div>
+        <h2>Actividad Reciente</h2>
+        <a href="{% url 'consola_auditoria' %}" style="margin-left:auto; font-size:12px; color:var(--accent); font-weight:600;">
+            Ver todo <i class="fa-solid fa-arrow-right" style="font-size:10px;"></i>
+        </a>
+    </div>
+    <div class="timeline-list">
+        {% for log in actividad_reciente %}
+        <div class="timeline-item">
+            <div class="timeline-dot {% if '[Consola]' in log.accion %}system{% elif 'alerta' in log.accion|lower %}warn{% endif %}"></div>
+            <div class="timeline-content">
+                <div class="timeline-action">{{ log.accion }}</div>
+                <div class="timeline-meta">
+                    {% if log.usuario %}
+                    <span><i class="fa-solid fa-user" style="margin-right:3px;"></i>{{ log.usuario.get_full_name|default:log.usuario.username }}</span>
+                    {% else %}
+                    <span><i class="fa-solid fa-robot" style="margin-right:3px;"></i>Sistema</span>
+                    {% endif %}
+                    {% if log.ticket %}
+                    <span><i class="fa-solid fa-ticket" style="margin-right:3px;"></i>{{ log.ticket.ticket_id }}</span>
+                    {% endif %}
+                    <span><i class="fa-regular fa-clock" style="margin-right:3px;"></i>{{ log.fecha|timesince }} atrás</span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div style="padding:60px 40px; text-align:center; color:var(--text-faint);">
+            <i class="fa-solid fa-inbox" style="font-size:36px; margin-bottom:12px; display:block; color:var(--border);"></i>
+            <p>No hay actividad registrada aún.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,280 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+{% comment %}F-13 · CONSOLA-PERFIL — Edición de perfil de usuario{% endcomment %}
+
+{% block title %}Perfil de {{ user_obj.get_full_name|default:user_obj.username }} — Consola | UNIDOSSIS{% endblock %}
+
+{% block content %}
+<style>
+    .breadcrumb { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; color:var(--text-faint); }
+    .breadcrumb a { color:var(--accent); font-weight:600; }
+    .breadcrumb a:hover { text-decoration:underline; }
+    .profile-layout { display:grid; grid-template-columns:340px 1fr; gap:20px; }
+    @media (max-width:900px) { .profile-layout { grid-template-columns:1fr; } }
+    .profile-sidebar { display:flex; flex-direction:column; gap:16px; }
+    .profile-main { display:flex; flex-direction:column; gap:16px; }
+    .p-card { background:white; border-radius:18px; border:1px solid rgba(30,58,138,0.08); overflow:hidden; }
+    .p-card-header { padding:20px 24px; border-bottom:1px solid var(--border-light); display:flex; align-items:center; gap:10px; }
+    .p-card-header h3 { font-size:14px; font-weight:700; margin:0; }
+    .p-card-body { padding:20px 24px; }
+    .p-avatar-big {
+        width:80px; height:80px; border-radius:20px; display:flex; align-items:center; justify-content:center;
+        font-size:32px; font-weight:800; color:white; margin:0 auto 14px;
+        box-shadow:0 8px 24px rgba(0,0,0,0.15);
+    }
+    .detail-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border-light); }
+    .detail-row:last-child { border-bottom:none; }
+    .detail-label { font-size:12px; color:var(--text-muted); font-weight:600; }
+    .detail-value { font-size:13px; font-weight:600; color:var(--text-main); text-align:right; }
+    .edit-form .form-group { margin-bottom:16px; }
+    .edit-form label { font-size:12px; font-weight:700; color:var(--text-main); margin-bottom:5px; display:block; }
+    .edit-form input, .edit-form select, .edit-form textarea {
+        width:100%; padding:10px 14px; border:1.5px solid var(--border); border-radius:12px;
+        font-size:13px; font-family:inherit; outline:none; transition:border-color 0.2s;
+    }
+    .edit-form input:focus, .edit-form select:focus, .edit-form textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+    .edit-form textarea { min-height:80px; resize:vertical; }
+    .timeline-mini { max-height:400px; overflow-y:auto; }
+    .tm-item { display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--border-light); }
+    .tm-item:last-child { border-bottom:none; }
+    .tm-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); margin-top:6px; flex-shrink:0; }
+    .tm-text { font-size:12px; color:var(--text-main); line-height:1.4; }
+    .tm-time { font-size:10px; color:var(--text-faint); margin-top:2px; }
+    .login-item { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
+    .login-item:last-child { border-bottom:none; }
+</style>
+
+<div class="breadcrumb">
+    <a href="{% url 'dashboard' %}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+    <a href="{% url 'consola_central' %}">Consola Central</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+    <a href="{% url 'consola_perfiles' %}">Perfiles</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+    <span>{{ user_obj.get_full_name|default:user_obj.username }}</span>
+</div>
+
+<div class="page-header">
+    <div>
+        <h1 style="font-size:22px;">{{ user_obj.get_full_name|default:user_obj.username }}</h1>
+        <p>@{{ user_obj.username }} · {{ perfil_obj.get_rol_display|default:"Sin perfil" }}</p>
+    </div>
+    <div style="display:flex; gap:8px;">
+        {% if perfil_obj and perfil_obj.rol != 'superadmin' %}
+        <form method="POST" style="margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="toggle_activo">
+            <button type="submit" class="btn {% if user_obj.is_active %}btn-outline{% else %}btn-primary{% endif %}" style="gap:6px;">
+                <i class="fa-solid {% if user_obj.is_active %}fa-power-off{% else %}fa-check{% endif %}"></i>
+                {% if user_obj.is_active %}Desactivar{% else %}Activar{% endif %}
+            </button>
+        </form>
+        {% endif %}
+        <a href="{% url 'consola_perfiles' %}" class="btn btn-outline" style="gap:6px;">
+            <i class="fa-solid fa-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="profile-layout">
+    <!-- ═══ SIDEBAR: Info del usuario ═══ -->
+    <div class="profile-sidebar">
+        <div class="p-card">
+            <div class="p-card-body" style="text-align:center; padding:30px 24px;">
+                <div class="p-avatar-big" style="
+                    {% if perfil_obj.rol == 'superadmin' %}background:linear-gradient(135deg,#1e293b,#334155);
+                    {% elif perfil_obj.rol == 'admin_pqrs' %}background:linear-gradient(135deg,#1e40af,#3b82f6);
+                    {% elif perfil_obj.rol == 'director_regional' %}background:linear-gradient(135deg,#166534,#22c55e);
+                    {% elif perfil_obj.rol == 'agente' %}background:linear-gradient(135deg,#9a3412,#f97316);
+                    {% elif perfil_obj.rol == 'cliente' %}background:linear-gradient(135deg,#7c3aed,#a78bfa);
+                    {% else %}background:linear-gradient(135deg,#6b7280,#9ca3af);
+                    {% endif %}
+                ">
+                    {{ user_obj.first_name|default:user_obj.username|truncatechars:1|upper }}
+                </div>
+                <div style="font-size:16px; font-weight:800; color:var(--primary);">{{ user_obj.get_full_name|default:user_obj.username }}</div>
+                <div style="font-size:12px; color:var(--text-faint); font-family:monospace; margin-top:4px;">@{{ user_obj.username }}</div>
+
+                <div style="display:flex; justify-content:center; gap:6px; margin-top:12px;">
+                    <span style="padding:4px 12px; border-radius:8px; font-size:11px; font-weight:700;
+                        {% if user_obj.is_active %}background:#d1fae5; color:#065f46;{% else %}background:#fee2e2; color:#991b1b;{% endif %}">
+                        {% if user_obj.is_active %}Activo{% else %}Inactivo{% endif %}
+                    </span>
+                </div>
+            </div>
+            <div style="padding:0 24px 20px;">
+                <div class="detail-row">
+                    <span class="detail-label">Rol</span>
+                    <span class="detail-value">{{ perfil_obj.get_rol_display|default:"—" }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Email</span>
+                    <span class="detail-value">{{ user_obj.email|default:"—" }}</span>
+                </div>
+                {% if perfil_obj.telefono %}
+                <div class="detail-row">
+                    <span class="detail-label">Teléfono</span>
+                    <span class="detail-value">{{ perfil_obj.telefono }}</span>
+                </div>
+                {% endif %}
+                {% if perfil_obj.regional %}
+                <div class="detail-row">
+                    <span class="detail-label">Regional</span>
+                    <span class="detail-value">{{ perfil_obj.get_regional_display }}</span>
+                </div>
+                {% endif %}
+                <div class="detail-row">
+                    <span class="detail-label">Registrado</span>
+                    <span class="detail-value">{{ user_obj.date_joined|date:"d M Y" }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Último login</span>
+                    <span class="detail-value">{{ user_obj.last_login|date:"d M Y H:i"|default:"Nunca" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Intentos de login -->
+        {% if intentos_login %}
+        <div class="p-card">
+            <div class="p-card-header">
+                <i class="fa-solid fa-fingerprint" style="color:var(--text-faint);"></i>
+                <h3>Últimos Accesos</h3>
+            </div>
+            <div class="p-card-body" style="padding:12px 24px;">
+                {% for intento in intentos_login %}
+                <div class="login-item">
+                    {% if intento.exitoso %}
+                    <i class="fa-solid fa-circle-check" style="color:#10b981;"></i>
+                    {% else %}
+                    <i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i>
+                    {% endif %}
+                    <div style="flex:1;">
+                        <div style="color:var(--text-main); font-weight:600;">{{ intento.ip }}</div>
+                        <div style="font-size:10px; color:var(--text-faint);">{{ intento.fecha|timesince }} atrás</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ═══ MAIN: Edición y actividad ═══ -->
+    <div class="profile-main">
+        <!-- Formulario de edición -->
+        <div class="p-card">
+            <div class="p-card-header">
+                <i class="fa-solid fa-pen-to-square" style="color:var(--accent);"></i>
+                <h3>Editar Perfil</h3>
+            </div>
+            <div class="p-card-body">
+                <form method="POST" class="edit-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="editar_perfil">
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-group">
+                            <label>Nombre</label>
+                            <input type="text" name="first_name" value="{{ user_obj.first_name }}" placeholder="Nombre">
+                        </div>
+                        <div class="form-group">
+                            <label>Apellido</label>
+                            <input type="text" name="last_name" value="{{ user_obj.last_name }}" placeholder="Apellido">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" value="{{ user_obj.email }}" placeholder="correo@unidossis.com.co">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="tel" name="telefono" value="{{ perfil_obj.telefono|default:'' }}" placeholder="3001234567">
+                    </div>
+
+                    {% if perfil.rol == 'superadmin' %}
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-group">
+                            <label>Rol</label>
+                            <select name="rol">
+                                {% for key, label in ROL_CHOICES %}
+                                <option value="{{ key }}" {% if perfil_obj.rol == key %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Regional</label>
+                            <select name="regional">
+                                <option value="">— Sin regional —</option>
+                                {% for key, label in REGIONAL_CHOICES %}
+                                <option value="{{ key }}" {% if perfil_obj.regional == key %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        <label>Nueva Contraseña <span style="font-weight:400; color:var(--text-faint);">(dejar vacío para no cambiar)</span></label>
+                        <input type="password" name="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notas del Administrador <span style="font-weight:400; color:var(--text-faint);">(solo visible para admins)</span></label>
+                        <textarea name="notas_admin" placeholder="Notas internas sobre este usuario...">{{ perfil_obj.notas_admin|default:'' }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="gap:8px; margin-top:8px;">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Actividad reciente -->
+        <div class="p-card">
+            <div class="p-card-header">
+                <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent);"></i>
+                <h3>Actividad Reciente</h3>
+            </div>
+            <div class="p-card-body timeline-mini" style="padding:12px 24px;">
+                {% for log in actividad %}
+                <div class="tm-item">
+                    <div class="tm-dot"></div>
+                    <div>
+                        <div class="tm-text">{{ log.accion }}</div>
+                        <div class="tm-time">{{ log.fecha|timesince }} atrás {% if log.ticket %} · {{ log.ticket.ticket_id }}{% endif %}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="padding:30px; text-align:center; color:var(--text-faint); font-size:13px;">
+                    No hay actividad registrada para este usuario.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Tickets asignados -->
+        {% if tickets_asignados %}
+        <div class="p-card">
+            <div class="p-card-header">
+                <i class="fa-solid fa-ticket" style="color:var(--warning);"></i>
+                <h3>Tickets Asignados</h3>
+            </div>
+            <div class="p-card-body" style="padding:12px 24px;">
+                {% for t in tickets_asignados %}
+                <a href="{% url 'ticket_detail' t.ticket_id %}" style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border-light); text-decoration:none; color:inherit;">
+                    <span style="font-family:monospace; font-size:11px; font-weight:700; color:var(--accent);">{{ t.ticket_id }}</span>
+                    <span style="flex:1; font-size:13px; font-weight:500;">{{ t.asunto|truncatechars:50 }}</span>
+                    <span class="status-badge status-{% if t.estado == 'abierto' %}open{% elif t.estado == 'revision' %}review{% else %}resolved{% endif %}" style="font-size:10px;">{{ t.get_estado_display }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% include "tickets/_form_footer.html" %}
+{% endblock %}

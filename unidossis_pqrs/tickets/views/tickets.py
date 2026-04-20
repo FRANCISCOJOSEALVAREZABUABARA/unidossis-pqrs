@@ -133,6 +133,13 @@ def ticket_detail_view(request, ticket_id):
     if perfil.rol == 'cliente':
         template_name = 'tickets/cliente/detalle.html'
 
+    # Encuesta CSAT asociada al ticket
+    encuesta_csat = None
+    try:
+        encuesta_csat = ticket.encuesta_csat
+    except EncuestaSatisfaccion.DoesNotExist:
+        pass
+
     return render(request, template_name, {
         'ticket': ticket,
         'adjuntos_cliente': adjuntos_cliente,
@@ -149,7 +156,8 @@ def ticket_detail_view(request, ticket_id):
         'perfil': perfil,
         'nav_active': 'dashboard',
         'cliente': perfil.cliente if perfil.rol == 'cliente' else None,
-        'es_agente_asignado': es_agente_asignado,  # Pasado al template para controlar edición
+        'es_agente_asignado': es_agente_asignado,
+        'encuesta_csat': encuesta_csat,
     })
 
 

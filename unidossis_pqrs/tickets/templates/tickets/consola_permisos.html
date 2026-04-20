@@ -1,0 +1,359 @@
+{% extends "tickets/base_admin.html" %}
+{% load static %}
+{% load consola_tags %}
+
+{% block title %}Permisos por Rol — Consola Central | UNIDOSSIS{% endblock %}
+
+{% block content %}
+<style>
+    .breadcrumb { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:12px; color:var(--text-faint); }
+    .breadcrumb a { color:var(--accent); font-weight:600; }
+    .breadcrumb a:hover { text-decoration:underline; }
+
+    .perm-layout { display:grid; grid-template-columns: 280px 1fr; gap:20px; }
+    @media (max-width:900px) { .perm-layout { grid-template-columns:1fr; } }
+
+    /* Role selector sidebar */
+    .role-selector { display:flex; flex-direction:column; gap:8px; }
+    .role-card {
+        display:flex; align-items:center; gap:14px; padding:16px 20px;
+        background:white; border-radius:16px; border:2px solid transparent;
+        cursor:pointer; transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
+        text-decoration:none; color:inherit;
+    }
+    .role-card:hover { border-color:rgba(59,130,246,0.3); transform:translateX(4px); box-shadow:0 4px 15px rgba(0,0,0,0.06); }
+    .role-card.active { border-color:var(--accent); background:linear-gradient(135deg, rgba(59,130,246,0.05) 0%, rgba(59,130,246,0.02) 100%); box-shadow:0 4px 20px rgba(59,130,246,0.15); }
+    .role-card .role-avatar {
+        width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+        font-size:16px; color:white; flex-shrink:0;
+    }
+    .role-card .role-name { font-size:13px; font-weight:700; color:var(--primary); }
+    .role-card .role-meta { font-size:11px; color:var(--text-faint); margin-top:2px; }
+    .role-card .role-check { margin-left:auto; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .role-card.active .role-check { background:var(--accent); color:white; font-size:10px; }
+    .role-card:not(.active) .role-check { background:var(--border-light); color:transparent; }
+
+    /* Permissions panel */
+    .perm-panel { background:white; border-radius:20px; border:1px solid rgba(30,58,138,0.08); overflow:hidden; }
+    .perm-panel-header {
+        padding:24px 28px; border-bottom:1px solid var(--border-light);
+        display:flex; align-items:center; gap:14px;
+    }
+    .perm-panel-avatar { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px; color:white; flex-shrink:0; }
+    .perm-panel-title { font-size:18px; font-weight:800; color:var(--primary); }
+    .perm-panel-subtitle { font-size:12px; color:var(--text-faint); margin-top:2px; }
+    .perm-panel-count { margin-left:auto; text-align:center; }
+    .perm-panel-count .count-num { font-size:24px; font-weight:800; color:var(--accent); }
+    .perm-panel-count .count-label { font-size:10px; color:var(--text-faint); font-weight:600; }
+
+    .perm-list { padding:0; }
+    .perm-item {
+        display:flex; align-items:center; gap:14px; padding:16px 28px;
+        border-bottom:1px solid var(--border-light); transition:background 0.15s;
+    }
+    .perm-item:last-child { border-bottom:none; }
+    .perm-item:hover { background:rgba(59,130,246,0.02); }
+    .perm-item .perm-icon { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+    .perm-item .perm-label { font-size:13.5px; font-weight:600; color:var(--text-main); }
+    .perm-item .perm-desc { font-size:11px; color:var(--text-faint); margin-top:1px; }
+
+    /* Toggle switch */
+    .toggle-switch {
+        margin-left:auto; width:44px; height:24px; border-radius:12px; border:none; cursor:pointer;
+        position:relative; transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
+        display:inline-flex; align-items:center; padding:2px; flex-shrink:0;
+    }
+    .toggle-switch.on { background:#10b981; }
+    .toggle-switch.off { background:#cbd5e1; }
+    .toggle-switch.locked { background:#e2e8f0; cursor:not-allowed; opacity:0.5; }
+    .toggle-switch .knob {
+        width:20px; height:20px; border-radius:50%; background:white;
+        transition:transform 0.25s cubic-bezier(0.4,0,0.2,1);
+        box-shadow:0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-switch.on .knob { transform:translateX(20px); }
+    .toggle-switch.off .knob { transform:translateX(0); }
+
+    .no-role-selected {
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        padding:80px 40px; text-align:center; color:var(--text-faint);
+    }
+    .no-role-selected i { font-size:48px; margin-bottom:16px; color:var(--border); }
+
+    .toast {
+        position:fixed; bottom:24px; right:24px; padding:14px 24px; border-radius:14px;
+        font-size:13px; font-weight:600; z-index:9999; display:none;
+        box-shadow:0 10px 30px rgba(0,0,0,0.15); animation:slideUp 0.3s ease;
+    }
+    @keyframes slideUp { from{transform:translateY(20px);opacity:0;} to{transform:translateY(0);opacity:1;} }
+    .toast.success { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
+    .toast.error { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+    .saving-pill {
+        position:fixed; top:20px; right:20px; padding:8px 16px; border-radius:10px;
+        background:rgba(59,130,246,0.1); color:var(--accent); font-size:12px; font-weight:700;
+        display:none; z-index:9999; backdrop-filter:blur(10px);
+    }
+
+    .perm-actions { padding:16px 28px; border-top:1px solid var(--border-light); display:flex; gap:10px; align-items:center; }
+</style>
+
+<div class="breadcrumb">
+    <a href="{% url 'dashboard' %}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+    <a href="{% url 'consola_central' %}">Consola Central</a>
+    <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+    <span>Permisos por Rol</span>
+</div>
+
+<div class="page-header">
+    <div style="display:flex; align-items:center; gap:14px;">
+        <div style="width:48px; height:48px; background:#fce7f3; border-radius:14px; display:flex; align-items:center; justify-content:center;">
+            <i class="fa-solid fa-lock" style="color:#db2777; font-size:20px;"></i>
+        </div>
+        <div>
+            <h1 style="font-size:22px;">Permisos por Rol</h1>
+            <p>Seleccione un rol para configurar sus permisos de acceso</p>
+        </div>
+    </div>
+    {% if perfil.rol == 'superadmin' %}
+    <button class="btn btn-outline" onclick="resetearPermisos()" style="gap:8px; border-color:var(--warning); color:var(--warning);">
+        <i class="fa-solid fa-rotate-left"></i> Restaurar Predeterminados
+    </button>
+    {% endif %}
+</div>
+
+<div class="perm-layout">
+    <!-- ═══ LEFT: Selector de Roles ═══ -->
+    <div>
+        <div style="font-size:10px; font-weight:800; color:var(--text-faint); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; padding-left:4px;">
+            <i class="fa-solid fa-user-shield" style="margin-right:4px;"></i> Roles del Sistema
+        </div>
+        <div class="role-selector">
+            {% for rol_key, rol_label in roles %}
+            <a href="{% url 'consola_permisos' %}?rol={{ rol_key }}" class="role-card {% if rol_seleccionado == rol_key %}active{% endif %}">
+                <div class="role-avatar" style="
+                    {% if rol_key == 'superadmin' %}background:linear-gradient(135deg,#1e293b,#334155);
+                    {% elif rol_key == 'admin_pqrs' %}background:linear-gradient(135deg,#1e40af,#3b82f6);
+                    {% elif rol_key == 'director_regional' %}background:linear-gradient(135deg,#166534,#22c55e);
+                    {% elif rol_key == 'agente' %}background:linear-gradient(135deg,#9a3412,#f97316);
+                    {% elif rol_key == 'cliente' %}background:linear-gradient(135deg,#7c3aed,#a78bfa);
+                    {% else %}background:linear-gradient(135deg,#6b7280,#9ca3af);
+                    {% endif %}
+                ">
+                    {% if rol_key == 'superadmin' %}<i class="fa-solid fa-crown"></i>
+                    {% elif rol_key == 'admin_pqrs' %}<i class="fa-solid fa-shield-halved"></i>
+                    {% elif rol_key == 'director_regional' %}<i class="fa-solid fa-map-location-dot"></i>
+                    {% elif rol_key == 'agente' %}<i class="fa-solid fa-eye"></i>
+                    {% elif rol_key == 'cliente' %}<i class="fa-solid fa-hospital-user"></i>
+                    {% else %}<i class="fa-solid fa-user-tag"></i>
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="role-name">{{ rol_label }}</div>
+                    <div class="role-meta">{{ rol_key }}</div>
+                </div>
+                <div class="role-check">
+                    {% if rol_seleccionado == rol_key %}<i class="fa-solid fa-check"></i>{% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ═══ RIGHT: Panel de Permisos ═══ -->
+    <div>
+        {% if rol_seleccionado %}
+        <div class="perm-panel">
+            <div class="perm-panel-header">
+                <div class="perm-panel-avatar" style="
+                    {% if rol_seleccionado == 'superadmin' %}background:linear-gradient(135deg,#1e293b,#334155);
+                    {% elif rol_seleccionado == 'admin_pqrs' %}background:linear-gradient(135deg,#1e40af,#3b82f6);
+                    {% elif rol_seleccionado == 'director_regional' %}background:linear-gradient(135deg,#166534,#22c55e);
+                    {% elif rol_seleccionado == 'agente' %}background:linear-gradient(135deg,#9a3412,#f97316);
+                    {% elif rol_seleccionado == 'cliente' %}background:linear-gradient(135deg,#7c3aed,#a78bfa);
+                    {% else %}background:linear-gradient(135deg,#6b7280,#9ca3af);
+                    {% endif %}
+                ">
+                    {% if rol_seleccionado == 'superadmin' %}<i class="fa-solid fa-crown"></i>
+                    {% elif rol_seleccionado == 'admin_pqrs' %}<i class="fa-solid fa-shield-halved"></i>
+                    {% elif rol_seleccionado == 'director_regional' %}<i class="fa-solid fa-map-location-dot"></i>
+                    {% elif rol_seleccionado == 'agente' %}<i class="fa-solid fa-eye"></i>
+                    {% elif rol_seleccionado == 'cliente' %}<i class="fa-solid fa-hospital-user"></i>
+                    {% else %}<i class="fa-solid fa-user-tag"></i>
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="perm-panel-title">{{ rol_seleccionado_label }}</div>
+                    <div class="perm-panel-subtitle">
+                        {% if rol_seleccionado == 'superadmin' %}Todos los permisos siempre activos
+                        {% else %}Configure los permisos de este rol
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="perm-panel-count">
+                    <div class="count-num">{{ permisos_activos }}</div>
+                    <div class="count-label">de {{ total_permisos }} activos</div>
+                </div>
+            </div>
+
+            {% if rol_seleccionado == 'superadmin' %}
+            <div style="padding:14px 28px; background:#f0fdf4; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border-light);">
+                <i class="fa-solid fa-info-circle" style="color:#16a34a;"></i>
+                <span style="font-size:12px; color:#166534; font-weight:600;">
+                    El Super Administrador tiene todos los permisos activados por defecto y no se pueden modificar.
+                </span>
+            </div>
+            {% endif %}
+
+            <div class="perm-list">
+                {% for perm in permisos_rol %}
+                <div class="perm-item">
+                    <div class="perm-icon" style="
+                        {% if perm.permitido %}background:#d1fae5; color:#059669;
+                        {% else %}background:#f1f5f9; color:#94a3b8;
+                        {% endif %}
+                    ">
+                        {% if 'dashboard' in perm.key %}<i class="fa-solid fa-chart-line"></i>
+                        {% elif 'crear' in perm.key %}<i class="fa-solid fa-plus"></i>
+                        {% elif 'editar' in perm.key %}<i class="fa-solid fa-pen"></i>
+                        {% elif 'eliminar' in perm.key %}<i class="fa-solid fa-trash"></i>
+                        {% elif 'responder' in perm.key %}<i class="fa-solid fa-reply"></i>
+                        {% elif 'reportes' in perm.key %}<i class="fa-solid fa-chart-pie"></i>
+                        {% elif 'excel' in perm.key %}<i class="fa-solid fa-file-excel"></i>
+                        {% elif 'clientes' in perm.key %}<i class="fa-solid fa-users"></i>
+                        {% elif 'usuarios' in perm.key %}<i class="fa-solid fa-user-gear"></i>
+                        {% elif 'sla' in perm.key %}<i class="fa-solid fa-sliders"></i>
+                        {% elif 'monitoreo' in perm.key %}<i class="fa-solid fa-chart-area"></i>
+                        {% elif 'auditoria' in perm.key %}<i class="fa-solid fa-scroll"></i>
+                        {% elif 'consola' in perm.key %}<i class="fa-solid fa-solar-panel"></i>
+                        {% elif 'analisis' in perm.key %}<i class="fa-solid fa-brain"></i>
+                        {% elif 'reclasificar' in perm.key %}<i class="fa-solid fa-wand-magic-sparkles"></i>
+                        {% else %}<i class="fa-solid fa-check-double"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="perm-label">{{ perm.label }}</div>
+                    </div>
+                    {% if rol_seleccionado == 'superadmin' %}
+                    <button class="toggle-switch on locked" disabled title="Siempre activo">
+                        <div class="knob"></div>
+                    </button>
+                    {% else %}
+                    <button class="toggle-switch {% if perm.permitido %}on{% else %}off{% endif %}"
+                            data-rol="{{ rol_seleccionado }}" data-permiso="{{ perm.key }}"
+                            onclick="togglePermiso(this)"
+                            title="{% if perm.permitido %}Desactivar{% else %}Activar{% endif %}">
+                        <div class="knob"></div>
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if rol_seleccionado != 'superadmin' %}
+            <div class="perm-actions">
+                <span style="font-size:11px; color:var(--text-faint);"><i class="fa-solid fa-bolt" style="margin-right:4px;"></i> Los cambios se guardan automáticamente</span>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <!-- No role selected -->
+        <div class="perm-panel">
+            <div class="no-role-selected">
+                <i class="fa-solid fa-hand-pointer"></i>
+                <p style="font-size:16px; font-weight:700; color:var(--text-main); margin:0 0 6px;">Seleccione un rol</p>
+                <p style="font-size:13px; margin:0;">Elija un rol del panel izquierdo para ver y configurar sus permisos de acceso al sistema.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="saving-pill" id="saving"><i class="fa-solid fa-spinner fa-spin"></i> Guardando...</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+
+function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.className = 'toast ' + type;
+    t.innerHTML = (type==='success' ? '<i class="fa-solid fa-circle-check"></i> ' : '<i class="fa-solid fa-circle-exclamation"></i> ') + msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
+
+function togglePermiso(btn) {
+    const rol = btn.dataset.rol;
+    const permiso = btn.dataset.permiso;
+    const isOn = btn.classList.contains('on');
+    const newState = !isOn;
+
+    // Optimistic update
+    btn.classList.toggle('on', newState);
+    btn.classList.toggle('off', !newState);
+
+    // Update icon color
+    const icon = btn.closest('.perm-item').querySelector('.perm-icon');
+    if (icon) {
+        icon.style.background = newState ? '#d1fae5' : '#f1f5f9';
+        icon.style.color = newState ? '#059669' : '#94a3b8';
+    }
+
+    // Update counter
+    const countEl = document.querySelector('.count-num');
+    if (countEl) {
+        let c = parseInt(countEl.textContent);
+        countEl.textContent = newState ? c + 1 : c - 1;
+    }
+
+    document.getElementById('saving').style.display = 'block';
+
+    fetch('{% url "api_consola_permisos_guardar" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ rol, permiso, permitido: newState })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('saving').style.display = 'none';
+        if (!data.ok) {
+            btn.classList.toggle('on', isOn);
+            btn.classList.toggle('off', !isOn);
+            if (icon) {
+                icon.style.background = isOn ? '#d1fae5' : '#f1f5f9';
+                icon.style.color = isOn ? '#059669' : '#94a3b8';
+            }
+            showToast(data.error || 'Error', 'error');
+        }
+    })
+    .catch(() => {
+        document.getElementById('saving').style.display = 'none';
+        btn.classList.toggle('on', isOn);
+        btn.classList.toggle('off', !isOn);
+        showToast('Error de conexión', 'error');
+    });
+}
+
+function resetearPermisos() {
+    if (!confirm('¿Restaurar todos los permisos a sus valores predeterminados? Esta acción reescribirá todos los cambios manuales.')) return;
+
+    fetch('{% url "api_consola_permisos_reset" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            showToast(data.mensaje, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast(data.error, 'error');
+        }
+    })
+    .catch(() => showToast('Error de conexión', 'error'));
+}
+</script>
+
+{% include "tickets/_form_footer.html" %}
+{% endblock %}
