@@ -91,66 +91,66 @@
                 <span class="settings-label">{{ request.user.first_name|default:request.user.username }}</span>
                 <i class="fa-solid fa-gear settings-gear-icon"></i>
             </button>
-
-            <!-- Settings Popover -->
-            <div class="settings-popover" id="settingsPopover">
-                <div class="settings-popover-header">
-                    <div class="settings-popover-avatar">
-                        {{ request.user.first_name|default:request.user.username|truncatechars:1|upper }}
-                    </div>
-                    <div class="settings-popover-info">
-                        <div class="settings-popover-name">{{ request.user.get_full_name|default:request.user.username }}</div>
-                        <div class="settings-popover-role">{{ perfil.get_rol_display|default:"Staff" }}</div>
-                    </div>
-                </div>
-
-                {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' %}
-                <div class="settings-popover-divider"></div>
-                <div class="settings-popover-section-label">Configuración</div>
-                <a href="{% url 'configurar_sla' %}" class="settings-popover-item">
-                    <div class="settings-popover-icon" style="background:#f0fdf4; color:#16a34a;">
-                        <i class="fa-solid fa-sliders"></i>
-                    </div>
-                    <span>Configurar SLA</span>
-                </a>
-                {% endif %}
-                {% if perfil.rol == 'superadmin' %}
-                <a href="{% url 'consola_central' %}" class="settings-popover-item">
-                    <div class="settings-popover-icon" style="background:#fef3c7; color:#d97706;">
-                        <i class="fa-solid fa-solar-panel"></i>
-                    </div>
-                    <span>Consola Central</span>
-                </a>
-                <a href="{% url 'monitoreo' %}" class="settings-popover-item">
-                    <div class="settings-popover-icon" style="background:#ede9fe; color:#7c3aed;">
-                        <i class="fa-solid fa-chart-area"></i>
-                    </div>
-                    <span>Monitor del Sistema</span>
-                </a>
-                <a href="{% url 'control_cambios' %}" class="settings-popover-item">
-                    <div class="settings-popover-icon" style="background:#e0f2fe; color:#0284c7;">
-                        <i class="fa-solid fa-code-branch"></i>
-                    </div>
-                    <span>Control de Cambios</span>
-                </a>
-                {% endif %}
-
-                <div class="settings-popover-divider"></div>
-                <a href="javascript:void(0)" class="settings-popover-item" onclick="document.getElementById('modal-cambiar-password').classList.add('visible'); toggleSettingsPopover(event);">
-                    <div class="settings-popover-icon" style="background:#eff6ff; color:#3b82f6;">
-                        <i class="fa-solid fa-key"></i>
-                    </div>
-                    <span>Cambiar Contraseña</span>
-                </a>
-                <a href="{% url 'logout' %}" class="settings-popover-item settings-popover-logout">
-                    <div class="settings-popover-icon" style="background:#fee2e2; color:#ef4444;">
-                        <i class="fa-solid fa-power-off"></i>
-                    </div>
-                    <span>Cerrar Sesión</span>
-                </a>
-            </div>
         </div>
     </aside>
+
+    <!-- Settings Popover (FUERA del sidebar para evitar overflow:hidden) -->
+    <div class="settings-popover" id="settingsPopover" style="position:fixed; bottom:72px; left:14px; z-index:500; opacity:0; visibility:hidden; transform:translateY(8px) scale(0.96); transition:all 0.25s cubic-bezier(0.4,0,0.2,1);">
+        <div class="settings-popover-header">
+            <div class="settings-popover-avatar">
+                {{ request.user.first_name|default:request.user.username|truncatechars:1|upper }}
+            </div>
+            <div class="settings-popover-info">
+                <div class="settings-popover-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+                <div class="settings-popover-role">{{ perfil.get_rol_display|default:"Staff" }}</div>
+            </div>
+        </div>
+
+        {% if perfil.rol == 'superadmin' or perfil.rol == 'admin_pqrs' %}
+        <div class="settings-popover-divider"></div>
+        <div class="settings-popover-section-label">Configuración</div>
+        <a href="{% url 'configurar_sla' %}" class="settings-popover-item">
+            <div class="settings-popover-icon" style="background:#f0fdf4; color:#16a34a;">
+                <i class="fa-solid fa-sliders"></i>
+            </div>
+            <span>Configurar SLA</span>
+        </a>
+        {% endif %}
+        {% if perfil.rol == 'superadmin' %}
+        <a href="{% url 'consola_central' %}" class="settings-popover-item">
+            <div class="settings-popover-icon" style="background:#fef3c7; color:#d97706;">
+                <i class="fa-solid fa-solar-panel"></i>
+            </div>
+            <span>Consola Central</span>
+        </a>
+        <a href="{% url 'monitoreo' %}" class="settings-popover-item">
+            <div class="settings-popover-icon" style="background:#ede9fe; color:#7c3aed;">
+                <i class="fa-solid fa-chart-area"></i>
+            </div>
+            <span>Monitor del Sistema</span>
+        </a>
+        <a href="{% url 'control_cambios' %}" class="settings-popover-item">
+            <div class="settings-popover-icon" style="background:#e0f2fe; color:#0284c7;">
+                <i class="fa-solid fa-code-branch"></i>
+            </div>
+            <span>Control de Cambios</span>
+        </a>
+        {% endif %}
+
+        <div class="settings-popover-divider"></div>
+        <a href="javascript:void(0)" class="settings-popover-item" onclick="document.getElementById('modal-cambiar-password').classList.add('visible'); toggleSettingsPopover(event);">
+            <div class="settings-popover-icon" style="background:#eff6ff; color:#3b82f6;">
+                <i class="fa-solid fa-key"></i>
+            </div>
+            <span>Cambiar Contraseña</span>
+        </a>
+        <a href="{% url 'logout' %}" class="settings-popover-item settings-popover-logout">
+            <div class="settings-popover-icon" style="background:#fee2e2; color:#ef4444;">
+                <i class="fa-solid fa-power-off"></i>
+            </div>
+            <span>Cerrar Sesión</span>
+        </a>
+    </div>
 
     <!-- ═══════ MAIN CONTENT ═══════ -->
     <main class="main-content" id="mainContent">
