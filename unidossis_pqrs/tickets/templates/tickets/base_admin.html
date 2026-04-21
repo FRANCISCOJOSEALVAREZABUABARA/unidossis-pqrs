@@ -680,15 +680,29 @@
     function toggleSettingsPopover(e) {
         e.stopPropagation();
         const popover = document.getElementById('settingsPopover');
-        popover.classList.toggle('open');
+        const isOpen = popover.classList.contains('open');
+        if (isOpen) {
+            popover.classList.remove('open');
+            popover.style.opacity = '0';
+            popover.style.visibility = 'hidden';
+            popover.style.transform = 'translateY(8px) scale(0.96)';
+        } else {
+            popover.classList.add('open');
+            popover.style.opacity = '1';
+            popover.style.visibility = 'visible';
+            popover.style.transform = 'translateY(0) scale(1)';
+        }
     }
 
     // Close popover on outside click
     document.addEventListener('click', function(e) {
         const wrap = document.querySelector('.sidebar-settings-wrap');
         const popover = document.getElementById('settingsPopover');
-        if (popover && wrap && !wrap.contains(e.target)) {
+        if (popover && wrap && !wrap.contains(e.target) && !popover.contains(e.target)) {
             popover.classList.remove('open');
+            popover.style.opacity = '0';
+            popover.style.visibility = 'hidden';
+            popover.style.transform = 'translateY(8px) scale(0.96)';
         }
     });
 
