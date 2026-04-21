@@ -313,7 +313,37 @@ class PermisoRol(models.Model):
 
     def __str__(self):
         estado = "✅" if self.permitido else "❌"
-        return f"{estado} {self.get_rol_display()} → {self.get_permiso_display()}"
+        return f"{estado} {self.rol} → {self.get_permiso_display()}"
+
+
+class RolPersonalizado(models.Model):
+    """Roles adicionales creados dinámicamente desde la Consola de Permisos."""
+    clave = models.CharField(
+        max_length=50, unique=True,
+        help_text="Identificador interno del rol (ej: supervisor_tecnico). Sin espacios."
+    )
+    label = models.CharField(
+        max_length=100,
+        help_text="Nombre visible del rol (ej: Supervisor Técnico)"
+    )
+    icono = models.CharField(
+        max_length=50, default='fa-user-tag',
+        help_text="Clase de ícono FontAwesome (ej: fa-user-tie)"
+    )
+    color_inicio = models.CharField(max_length=7, default='#6b7280')
+    color_fin = models.CharField(max_length=7, default='#9ca3af')
+    creado_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='roles_creados'
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Rol Personalizado"
+        verbose_name_plural = "Roles Personalizados"
+        ordering = ['label']
+
+    def __str__(self):
+        return f"{self.label} ({self.clave})"
 
 
 # ─────────────────────────────────────────────────────────────

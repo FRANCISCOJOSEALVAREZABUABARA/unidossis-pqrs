@@ -78,4 +78,6 @@ urlpatterns = [
     path('consola/api/tabla/<str:tabla>/eliminar/<int:pk>/', views.api_consola_eliminar, name='api_consola_eliminar'),
     path('consola/api/permisos/guardar/', views.api_consola_permisos_guardar, name='api_consola_permisos_guardar'),
     path('consola/api/permisos/reset/', views.api_consola_permisos_reset, name='api_consola_permisos_reset'),
+    path('consola/api/roles/crear/', views.api_crear_rol, name='api_crear_rol'),
+    path('consola/api/roles/eliminar/<str:clave>/', views.api_eliminar_rol, name='api_eliminar_rol'),
 ]

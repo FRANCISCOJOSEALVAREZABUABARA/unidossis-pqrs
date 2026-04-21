@@ -17,7 +17,7 @@ from ..models import (
     PerfilUsuario, ConfiguracionSLA, LogActividad,
     ComentarioTicket, EncuestaSatisfaccion, FeedbackIA,
     IntentoLogin, SolicitudResetPassword, AlertaSLA,
-    PermisoRol,
+    PermisoRol, RolPersonalizado,
 )
 from ._helpers import rol_requerido
 
@@ -454,7 +454,11 @@ def consola_permisos_view(request):
     """Vista de permisos con selector de rol."""
     _inicializar_permisos()
 
-    roles = list(PerfilUsuario.ROL_CHOICES)
+    # Combinar roles del sistema con roles personalizados
+    roles_base = list(PerfilUsuario.ROL_CHOICES)
+    roles_custom = list(RolPersonalizado.objects.values_list('clave', 'label'))
+    roles = roles_base + roles_custom
+    roles_custom_objs = list(RolPersonalizado.objects.all())
     permisos_list = PermisoRol.PERMISO_CHOICES
     rol_seleccionado = request.GET.get('rol', '')
 
@@ -488,6 +492,7 @@ def consola_permisos_view(request):
         'perfil': request.user.perfil,
         'nav_active': 'consola',
         'roles': roles,
+        'roles_custom_claves': [r.clave for r in roles_custom_objs],
         'permisos_list': permisos_list,
         'rol_seleccionado': rol_seleccionado,
         'rol_seleccionado_label': rol_seleccionado_label,
@@ -556,6 +561,88 @@ def api_consola_permisos_reset(request):
     )
 
     return JsonResponse({'ok': True, 'mensaje': 'Permisos reseteados a valores predeterminados.'})
+
+
+@login_required
+@rol_requerido('superadmin')
+def api_crear_rol(request):
+    """API AJAX — Crear un nuevo rol personalizado."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+
+    label = (data.get('label') or '').strip()
+    clave = (data.get('clave') or '').strip().lower().replace(' ', '_').replace('-', '_')
+    icono = (data.get('icono') or 'fa-user-tag').strip()
+    color_inicio = (data.get('color_inicio') or '#6b7280').strip()
+    color_fin = (data.get('color_fin') or '#9ca3af').strip()
+
+    if not label:
+        return JsonResponse({'ok': False, 'error': 'El nombre del rol es obligatorio.'}, status=400)
+    if not clave:
+        return JsonResponse({'ok': False, 'error': 'La clave del rol es obligatoria.'}, status=400)
+
+    # Validar que no exista clave duplicada (roles del sistema + personalizados)
+    roles_sistema = [r[0] for r in PerfilUsuario.ROL_CHOICES]
+    if clave in roles_sistema:
+        return JsonResponse({'ok': False, 'error': f'La clave "{clave}" ya es un rol del sistema.'}, status=400)
+    if RolPersonalizado.objects.filter(clave=clave).exists():
+        return JsonResponse({'ok': False, 'error': f'Ya existe un rol con la clave "{clave}".'}, status=400)
+
+    try:
+        rol = RolPersonalizado.objects.create(
+            clave=clave, label=label, icono=icono,
+            color_inicio=color_inicio, color_fin=color_fin,
+            creado_por=request.user,
+        )
+        # Inicializar todos los permisos en False para el nuevo rol
+        for perm_key, _ in PermisoRol.PERMISO_CHOICES:
+            PermisoRol.objects.get_or_create(
+                rol=clave, permiso=perm_key,
+                defaults={'permitido': False}
+            )
+        LogActividad.objects.create(
+            usuario=request.user,
+            accion=f'[Consola] Creó rol personalizado "{label}" (clave: {clave})',
+        )
+        return JsonResponse({
+            'ok': True,
+            'id': rol.pk,
+            'clave': rol.clave,
+            'label': rol.label,
+            'icono': rol.icono,
+            'color_inicio': rol.color_inicio,
+            'color_fin': rol.color_fin,
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@rol_requerido('superadmin')
+def api_eliminar_rol(request, clave):
+    """API AJAX — Eliminar un rol personalizado y todos sus permisos."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    try:
+        rol = RolPersonalizado.objects.get(clave=clave)
+    except RolPersonalizado.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Rol no encontrado.'}, status=404)
+
+    label = rol.label
+    PermisoRol.objects.filter(rol=clave).delete()
+    rol.delete()
+
+    LogActividad.objects.create(
+        usuario=request.user,
+        accion=f'[Consola] Eliminó rol personalizado "{label}" (clave: {clave})',
+    )
+    return JsonResponse({'ok': True, 'mensaje': f'Rol "{label}" eliminado correctamente.'})
 
 
 # ═══════════════════════════════════════════════════════════════

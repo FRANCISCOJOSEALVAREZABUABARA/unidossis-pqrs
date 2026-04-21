@@ -92,9 +92,30 @@
         position:fixed; top:20px; right:20px; padding:8px 16px; border-radius:10px;
         background:rgba(59,130,246,0.1); color:var(--accent); font-size:12px; font-weight:700;
         display:none; z-index:9999; backdrop-filter:blur(10px);
-    }
+    }    .perm-actions { padding:16px 28px; border-top:1px solid var(--border-light); display:flex; gap:10px; align-items:center; }
 
-    .perm-actions { padding:16px 28px; border-top:1px solid var(--border-light); display:flex; gap:10px; align-items:center; }
+    /* Modal Nuevo Rol */
+    .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.5); backdrop-filter:blur(6px); z-index:10000; display:none; align-items:center; justify-content:center; }
+    .modal-overlay.visible { display:flex; }
+    .modal-card { background:white; border-radius:24px; padding:32px; width:480px; max-width:calc(100vw - 32px); box-shadow:0 40px 80px rgba(0,0,0,0.2); animation:modalIn 0.3s cubic-bezier(0.4,0,0.2,1); }
+    @keyframes modalIn { from{transform:translateY(20px) scale(0.97);opacity:0;} to{transform:translateY(0) scale(1);opacity:1;} }
+    .modal-title { font-size:18px; font-weight:800; color:var(--primary); margin-bottom:4px; }
+    .modal-sub { font-size:12px; color:var(--text-faint); margin-bottom:24px; }
+    .modal-field { margin-bottom:16px; }
+    .modal-field label { display:block; font-size:11px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; }
+    .modal-field input, .modal-field select { width:100%; padding:10px 14px; border:1.5px solid var(--border-light); border-radius:10px; font-size:13px; font-family:inherit; color:var(--primary); background:white; box-sizing:border-box; transition:border-color .2s; }
+    .modal-field input:focus, .modal-field select:focus { outline:none; border-color:var(--accent); }
+    .icon-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; max-height:160px; overflow-y:auto; }
+    .icon-opt { width:40px; height:40px; border-radius:10px; border:2px solid var(--border-light); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; color:var(--text-faint); transition:all .2s; }
+    .icon-opt:hover { border-color:var(--accent); color:var(--accent); }
+    .icon-opt.selected { border-color:var(--accent); background:rgba(59,130,246,0.08); color:var(--accent); }
+    .color-grid { display:flex; gap:10px; flex-wrap:wrap; }
+    .color-opt { width:32px; height:32px; border-radius:50%; border:3px solid transparent; cursor:pointer; transition:all .2s; }
+    .color-opt.selected { border-color:var(--primary); transform:scale(1.15); }
+    .role-card-custom { position:relative; }
+    .btn-eliminar-rol { position:absolute; top:50%; right:12px; transform:translateY(-50%); width:26px; height:26px; border-radius:50%; background:#fee2e2; color:#dc2626; border:none; cursor:pointer; font-size:11px; display:none; align-items:center; justify-content:center; transition:all .2s; }
+    .role-card-custom:hover .btn-eliminar-rol { display:flex; }
+    .btn-eliminar-rol:hover { background:#dc2626; color:white; }
 </style>
 
 <div class="breadcrumb">
@@ -116,10 +137,52 @@
         </div>
     </div>
     {% if perfil.rol == 'superadmin' %}
-    <button class="btn btn-outline" onclick="resetearPermisos()" style="gap:8px; border-color:var(--warning); color:var(--warning);">
-        <i class="fa-solid fa-rotate-left"></i> Restaurar Predeterminados
-    </button>
+    <div style="display:flex;gap:10px;align-items:center;">
+        <button class="btn btn-outline" onclick="resetearPermisos()" style="gap:8px; border-color:var(--warning); color:var(--warning);">
+            <i class="fa-solid fa-rotate-left"></i> Restaurar Predeterminados
+        </button>
+        <button class="btn btn-primary" onclick="abrirModalNuevoRol()" style="gap:8px; background:linear-gradient(135deg,#3b82f6,#6366f1);">
+            <i class="fa-solid fa-plus"></i> Nuevo Rol
+        </button>
+    </div>
     {% endif %}
+</div>
+
+<!-- ═══ MODAL: NUEVO ROL ═══ -->
+<div class="modal-overlay" id="modalNuevoRol" onclick="if(event.target===this)cerrarModalNuevoRol()">
+    <div class="modal-card">
+        <div class="modal-title"><i class="fa-solid fa-user-plus" style="color:var(--accent);margin-right:8px;"></i>Crear Nuevo Rol</div>
+        <div class="modal-sub">El rol se guardará en el sistema con todos los permisos desactivados por defecto.</div>
+
+        <div class="modal-field">
+            <label>Nombre del Rol *</label>
+            <input type="text" id="rolLabel" placeholder="Ej: Supervisor Técnico" oninput="generarClave()">
+        </div>
+        <div class="modal-field">
+            <label>Clave interna * <span style="font-weight:400;color:var(--text-faint)">(se genera automáticamente)</span></label>
+            <input type="text" id="rolClave" placeholder="supervisor_tecnico" style="font-family:monospace;">
+        </div>
+        <div class="modal-field">
+            <label>Ícono</label>
+            <div class="icon-grid" id="iconGrid"></div>
+            <input type="hidden" id="rolIcono" value="fa-user-tag">
+        </div>
+        <div class="modal-field">
+            <label>Color del Avatar</label>
+            <div class="color-grid" id="colorGrid"></div>
+            <input type="hidden" id="rolColorInicio" value="#6b7280">
+            <input type="hidden" id="rolColorFin" value="#9ca3af">
+        </div>
+
+        <div id="modalError" style="display:none;padding:10px 14px;background:#fee2e2;color:#991b1b;border-radius:10px;font-size:12px;margin-bottom:12px;"></div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+            <button class="btn btn-outline" onclick="cerrarModalNuevoRol()">Cancelar</button>
+            <button class="btn btn-primary" id="btnGuardarRol" onclick="guardarNuevoRol()" style="background:linear-gradient(135deg,#3b82f6,#6366f1);">
+                <i class="fa-solid fa-check"></i> Crear Rol
+            </button>
+        </div>
+    </div>
 </div>
 
 <div class="perm-layout">
@@ -130,7 +193,9 @@
         </div>
         <div class="role-selector">
             {% for rol_key, rol_label in roles %}
-            <a href="{% url 'consola_permisos' %}?rol={{ rol_key }}" class="role-card {% if rol_seleccionado == rol_key %}active{% endif %}">
+            <a href="{% url 'consola_permisos' %}?rol={{ rol_key }}"
+               class="role-card {% if rol_seleccionado == rol_key %}active{% endif %} {% if rol_key in roles_custom_claves %}role-card-custom{% endif %}"
+               style="padding-right:{% if rol_key in roles_custom_claves %}44px{% else %}20px{% endif %}">
                 <div class="role-avatar" style="
                     {% if rol_key == 'superadmin' %}background:linear-gradient(135deg,#1e293b,#334155);
                     {% elif rol_key == 'admin_pqrs' %}background:linear-gradient(135deg,#1e40af,#3b82f6);
@@ -155,6 +220,11 @@
                 <div class="role-check">
                     {% if rol_seleccionado == rol_key %}<i class="fa-solid fa-check"></i>{% endif %}
                 </div>
+                {% if rol_key in roles_custom_claves %}
+                <button class="btn-eliminar-rol" onclick="event.preventDefault();event.stopPropagation();eliminarRol('{{ rol_key }}','{{ rol_label }}')" title="Eliminar rol">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+                {% endif %}
             </a>
             {% endfor %}
         </div>
@@ -352,6 +422,152 @@ function resetearPermisos() {
         }
     })
     .catch(() => showToast('Error de conexión', 'error'));
+}
+
+// ════════ MODAL NUEVO ROL ════════
+const ICONOS_DISPONIBLES = [
+    'fa-user-tag','fa-user-tie','fa-user-shield','fa-user-graduate','fa-user-nurse',
+    'fa-user-cog','fa-headset','fa-briefcase','fa-star','fa-bolt',
+    'fa-fire','fa-leaf','fa-globe','fa-building','fa-hospital',
+    'fa-flask','fa-chart-line','fa-comments','fa-wrench','fa-gears',
+    'fa-key','fa-lock-open','fa-eye','fa-handshake','fa-medal',
+];
+const PALETAS = [
+    {inicio:'#1e293b',fin:'#334155'},
+    {inicio:'#1e40af',fin:'#3b82f6'},
+    {inicio:'#166534',fin:'#22c55e'},
+    {inicio:'#9a3412',fin:'#f97316'},
+    {inicio:'#7c3aed',fin:'#a78bfa'},
+    {inicio:'#be185d',fin:'#f472b6'},
+    {inicio:'#0f766e',fin:'#14b8a6'},
+    {inicio:'#b45309',fin:'#fbbf24'},
+    {inicio:'#1d4ed8',fin:'#60a5fa'},
+    {inicio:'#6b21a8',fin:'#c084fc'},
+];
+let selectedIcono = 'fa-user-tag';
+let selectedPaleta = PALETAS[0];
+
+function initModal() {
+    // Íconos
+    const grid = document.getElementById('iconGrid');
+    grid.innerHTML = '';
+    ICONOS_DISPONIBLES.forEach(ic => {
+        const d = document.createElement('div');
+        d.className = 'icon-opt' + (ic === selectedIcono ? ' selected' : '');
+        d.innerHTML = `<i class="fa-solid ${ic}"></i>`;
+        d.onclick = () => {
+            document.querySelectorAll('.icon-opt').forEach(x => x.classList.remove('selected'));
+            d.classList.add('selected');
+            selectedIcono = ic;
+            document.getElementById('rolIcono').value = ic;
+        };
+        grid.appendChild(d);
+    });
+    // Colores
+    const cg = document.getElementById('colorGrid');
+    cg.innerHTML = '';
+    PALETAS.forEach((p, i) => {
+        const c = document.createElement('div');
+        c.className = 'color-opt' + (i === 0 ? ' selected' : '');
+        c.style.background = `linear-gradient(135deg,${p.inicio},${p.fin})`;
+        c.title = p.inicio;
+        c.onclick = () => {
+            document.querySelectorAll('.color-opt').forEach(x => x.classList.remove('selected'));
+            c.classList.add('selected');
+            selectedPaleta = p;
+            document.getElementById('rolColorInicio').value = p.inicio;
+            document.getElementById('rolColorFin').value = p.fin;
+        };
+        cg.appendChild(c);
+    });
+}
+
+function generarClave() {
+    const label = document.getElementById('rolLabel').value;
+    const clave = label.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s_]/g, '')
+        .trim().replace(/\s+/g, '_');
+    document.getElementById('rolClave').value = clave;
+}
+
+function abrirModalNuevoRol() {
+    selectedIcono = 'fa-user-tag';
+    selectedPaleta = PALETAS[0];
+    document.getElementById('rolLabel').value = '';
+    document.getElementById('rolClave').value = '';
+    document.getElementById('rolIcono').value = 'fa-user-tag';
+    document.getElementById('rolColorInicio').value = PALETAS[0].inicio;
+    document.getElementById('rolColorFin').value = PALETAS[0].fin;
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('btnGuardarRol').disabled = false;
+    initModal();
+    document.getElementById('modalNuevoRol').classList.add('visible');
+    setTimeout(() => document.getElementById('rolLabel').focus(), 100);
+}
+
+function cerrarModalNuevoRol() {
+    document.getElementById('modalNuevoRol').classList.remove('visible');
+}
+
+function guardarNuevoRol() {
+    const label = document.getElementById('rolLabel').value.trim();
+    const clave = document.getElementById('rolClave').value.trim();
+    const icono = document.getElementById('rolIcono').value;
+    const colorInicio = document.getElementById('rolColorInicio').value;
+    const colorFin = document.getElementById('rolColorFin').value;
+    const errEl = document.getElementById('modalError');
+
+    if (!label) { errEl.textContent = 'El nombre del rol es obligatorio.'; errEl.style.display='block'; return; }
+    if (!clave) { errEl.textContent = 'La clave del rol es obligatoria.'; errEl.style.display='block'; return; }
+    errEl.style.display = 'none';
+
+    const btn = document.getElementById('btnGuardarRol');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+
+    fetch('{% url "api_crear_rol" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ label, clave, icono, color_inicio: colorInicio, color_fin: colorFin })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Crear Rol';
+        if (data.ok) {
+            cerrarModalNuevoRol();
+            showToast(`Rol "${data.label}" creado exitosamente.`, 'success');
+            setTimeout(() => location.reload(), 900);
+        } else {
+            errEl.textContent = data.error || 'Error al crear el rol.';
+            errEl.style.display = 'block';
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Crear Rol';
+        errEl.textContent = 'Error de conexión.';
+        errEl.style.display = 'block';
+    });
+}
+
+function eliminarRol(clave, label) {
+    if (!confirm(`¿Eliminar el rol "${label}"? Se eliminarán también todos sus permisos configurados. Esta acción no se puede deshacer.`)) return;
+    fetch(`/consola/api/roles/eliminar/${clave}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            showToast(data.mensaje, 'success');
+            setTimeout(() => location.href = '{% url "consola_permisos" %}', 800);
+        } else {
+            showToast(data.error || 'Error al eliminar.', 'error');
+        }
+    })
+    .catch(() => showToast('Error de conexión.', 'error'));
 }
 </script>
 
