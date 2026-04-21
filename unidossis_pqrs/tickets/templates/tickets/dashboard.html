@@ -327,16 +327,16 @@
 
     <!-- ═══════ FILTER STRIP ═══════ -->
     <div class="filter-strip">
-        <a href="{% url 'dashboard' %}" class="filter-chip {% if not filtro_actual %}active{% endif %}">
+        <a href="{% url 'dashboard' %}{% if cliente_id_selected or search_query %}?{% if cliente_id_selected %}cliente_id={{ cliente_id_selected }}{% endif %}{% if search_query %}{% if cliente_id_selected %}&{% endif %}q={{ search_query }}{% endif %}{% endif %}" class="filter-chip {% if not filtro_actual %}active{% endif %}">
             <i class="fa-solid fa-inbox"></i> Todos <span class="chip-count">{{ cantidad_total }}</span>
         </a>
-        <a href="{% url 'dashboard' %}?estado=abierto" class="filter-chip {% if filtro_actual == 'abierto' %}active{% endif %}">
+        <a href="{% url 'dashboard' %}?estado=abierto{% if cliente_id_selected %}&cliente_id={{ cliente_id_selected }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="filter-chip {% if filtro_actual == 'abierto' %}active{% endif %}">
             <i class="fa-solid fa-circle-exclamation"></i> Abiertos <span class="chip-count">{{ cantidad_urgentes }}</span>
         </a>
-        <a href="{% url 'dashboard' %}?estado=revision" class="filter-chip {% if filtro_actual == 'revision' %}active{% endif %}">
+        <a href="{% url 'dashboard' %}?estado=revision{% if cliente_id_selected %}&cliente_id={{ cliente_id_selected }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="filter-chip {% if filtro_actual == 'revision' %}active{% endif %}">
             <i class="fa-solid fa-clock"></i> En Revisión <span class="chip-count">{{ total_revision }}</span>
         </a>
-        <a href="{% url 'dashboard' %}?estado=resuelto" class="filter-chip {% if filtro_actual == 'resuelto' %}active{% endif %}">
+        <a href="{% url 'dashboard' %}?estado=resuelto{% if cliente_id_selected %}&cliente_id={{ cliente_id_selected }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="filter-chip {% if filtro_actual == 'resuelto' %}active{% endif %}">
             <i class="fa-solid fa-check-circle"></i> Resueltos <span class="chip-count">{{ total_cerrados }}</span>
         </a>
 
