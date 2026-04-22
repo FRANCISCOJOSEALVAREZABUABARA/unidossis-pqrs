@@ -2512,3 +2512,317 @@ tr.success-flash { animation: flashGreen 1.5s ease-out; }
     border-color: var(--accent);
     transform: translateY(-1px);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — v2.3.0
+   Mobile-first adaptations for sidebar + layout + tables
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Hamburger Button (oculto en desktop, visible en móvil) ── */
+.mobile-hamburger {
+    display: none;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 9000;
+    width: 42px;
+    height: 42px;
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    color: var(--primary);
+    font-size: 16px;
+    transition: all 0.2s ease;
+}
+
+.mobile-hamburger:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    box-shadow: 0 4px 16px rgba(59,130,246,0.35);
+}
+
+/* ── Mobile Sidebar Overlay (backdrop) ── */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 199;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    animation: fadeOverlay 0.25s ease;
+}
+
+@keyframes fadeOverlay {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+/* ── Laptop Compacta (≤1366px): sidebar colapsa automáticamente ── */
+@media (max-width: 1366px) {
+    .sidebar {
+        width: var(--sidebar-collapsed);
+    }
+
+    .main-content {
+        margin-left: var(--sidebar-collapsed);
+        width: calc(100vw - var(--sidebar-collapsed));
+        max-width: calc(100vw - var(--sidebar-collapsed));
+        padding: 24px 28px;
+    }
+
+    .sidebar .nav-item span,
+    .sidebar .nav-section-label,
+    .sidebar .nav-badge {
+        display: none;
+    }
+
+    .sidebar .nav-item {
+        justify-content: center;
+        padding: 14px 0;
+        gap: 0;
+    }
+
+    .sidebar-toggle {
+        left: calc(var(--sidebar-collapsed) - 16px);
+    }
+
+    .sidebar.collapsed .sidebar-toggle {
+        left: calc(var(--sidebar-collapsed) - 16px);
+    }
+
+    .sidebar-settings-btn .settings-label,
+    .sidebar-settings-btn .settings-gear-icon {
+        display: none;
+    }
+
+    .sidebar-settings-btn {
+        justify-content: center;
+        padding: 10px;
+    }
+
+    .stat-value { font-size: 22px; }
+    .page-header h1 { font-size: 20px; }
+    .stats-grid { gap: 14px; }
+}
+
+/* ── Tablet y Móvil (≤768px): sidebar como overlay ── */
+@media (max-width: 768px) {
+    /* Mostrar hamburger */
+    .mobile-hamburger {
+        display: flex;
+    }
+
+    /* Ocultar el toggle de desktop */
+    .sidebar-toggle {
+        display: none !important;
+    }
+
+    /* Sidebar: oculto fuera de pantalla por defecto */
+    .sidebar {
+        transform: translateX(-100%);
+        width: var(--sidebar-width) !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 9500;
+    }
+
+    /* Restaurar nav items en sidebar abierto (anulamos el colapso de 1366px) */
+    .sidebar .nav-item span,
+    .sidebar .nav-section-label,
+    .sidebar .nav-badge {
+        display: unset;
+    }
+
+    .sidebar .nav-item {
+        justify-content: flex-start;
+        padding: 11px 14px;
+        gap: 12px;
+    }
+
+    .sidebar-settings-btn .settings-label,
+    .sidebar-settings-btn .settings-gear-icon {
+        display: unset;
+    }
+
+    .sidebar-settings-btn {
+        justify-content: flex-start;
+        padding: 10px 12px;
+    }
+
+    /* Sidebar abierto en móvil */
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    /* Main content: ocupa todo el ancho */
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 70px 16px 24px;  /* top extra para hamburger */
+        transition: none;
+    }
+
+    /* Tablas: scroll horizontal */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Stats grid: 2 columnas en tablet */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    /* Page header en columna */
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .page-header h1 { font-size: 20px; }
+
+    /* Search bar: ancho completo */
+    .search-bar {
+        width: 100%;
+    }
+
+    .search-bar input {
+        width: 100%;
+    }
+
+    /* Panel: padding reducido */
+    .panel {
+        padding: 18px 16px;
+    }
+
+    /* Card header: stack en móvil */
+    .card-header {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 14px 16px;
+    }
+
+    /* Formularios: columna única */
+    .form-row {
+        flex-direction: column !important;
+    }
+
+    .form-group {
+        width: 100% !important;
+    }
+
+    /* Modal: full width en móvil */
+    .modal {
+        width: calc(100vw - 32px) !important;
+        max-width: 100% !important;
+        margin: 16px;
+        border-radius: 20px !important;
+    }
+
+    /* Stat card: padding reducido */
+    .stat-card {
+        padding: 18px 16px;
+    }
+
+    .stat-value { font-size: 24px; }
+    .stat-title { font-size: 11px; }
+
+    /* FAB "View As": reposicionar para no obstruir */
+    #viewas-fab {
+        top: 14px !important;
+        right: 14px !important;
+        left: auto !important;
+    }
+
+    /* Top header: stack */
+    .top-header {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 12px 14px;
+    }
+
+    /* Botones: touch targets adecuados */
+    .btn {
+        min-height: 40px;
+        padding: 10px 16px;
+    }
+
+    /* Sidebar collapsed logic no aplica en móvil */
+    .main-content.sidebar-collapsed {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+/* ── Móvil Pequeño (≤480px) ── */
+@media (max-width: 480px) {
+    /* Stats: 1 columna */
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Padding más compacto */
+    .main-content {
+        padding: 66px 12px 20px;
+    }
+
+    .panel {
+        padding: 14px 12px;
+    }
+
+    .stat-card {
+        padding: 16px 14px;
+    }
+
+    .stat-value { font-size: 22px; }
+    .page-header h1 { font-size: 18px; }
+
+    /* Tabla: font más pequeño */
+    .data-table th,
+    .data-table td {
+        font-size: 11px;
+        padding: 8px 8px;
+    }
+
+    /* Card header: columna */
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* Botones en grupos: stack */
+    .header-actions,
+    .btn-group {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .header-actions .btn,
+    .btn-group .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

@@ -152,6 +152,14 @@
         </a>
     </div>
 
+    <!-- ═══════ OVERLAY MÓVIL (fondo oscuro al abrir sidebar) ═══════ -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
+    <!-- ═══════ HAMBURGER BUTTON (solo visible en móvil ≤768px) ═══════ -->
+    <button class="mobile-hamburger" id="mobileHamburger" onclick="toggleMobileSidebar()" aria-label="Abrir menú">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+
     <!-- ═══════ MAIN CONTENT ═══════ -->
     <main class="main-content" id="mainContent">
         {% if request.simulacion_activa %}
@@ -664,8 +672,13 @@
 </div>
 
 <script>
-    // ═══════ SIDEBAR TOGGLE ═══════
+    // ═══════ SIDEBAR TOGGLE (Desktop) ═══════
     function toggleSidebar() {
+        // En móvil, el toggle actúa como cierre del menú
+        if (window.innerWidth <= 768) {
+            closeMobileSidebar();
+            return;
+        }
         const sidebar = document.getElementById('mainSidebar');
         const content = document.getElementById('mainContent');
         sidebar.classList.toggle('collapsed');
@@ -675,6 +688,46 @@
         const popover = document.getElementById('settingsPopover');
         if (popover) popover.classList.remove('open');
     }
+
+    // ═══════ SIDEBAR TOGGLE MÓVIL ═══════
+    function toggleMobileSidebar() {
+        const sidebar = document.getElementById('mainSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const hamburger = document.getElementById('mobileHamburger');
+        const isOpen = sidebar.classList.contains('mobile-open');
+        if (isOpen) {
+            closeMobileSidebar();
+        } else {
+            sidebar.classList.add('mobile-open');
+            overlay.classList.add('active');
+            hamburger.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            document.body.style.overflow = 'hidden';  /* evita scroll del fondo */
+        }
+    }
+
+    function closeMobileSidebar() {
+        const sidebar = document.getElementById('mainSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const hamburger = document.getElementById('mobileHamburger');
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('active');
+        hamburger.innerHTML = '<i class="fa-solid fa-bars"></i>';
+        document.body.style.overflow = '';
+    }
+
+    // Cerrar sidebar móvil al hacer click en un nav-item
+    document.querySelectorAll('.nav-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+            if (window.innerWidth <= 768) closeMobileSidebar();
+        });
+    });
+
+    // Cerrar sidebar al rotar/redimensionar a desktop
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            closeMobileSidebar();
+        }
+    });
 
     // ═══════ SETTINGS POPOVER — Posicionamiento dinámico ═══════
     function toggleSettingsPopover(e) {

@@ -229,41 +229,136 @@ function cambiarRolCliente(rol) {
                 <span class="settings-label">{{ cliente.nombre|default:request.user.username|truncatechars:18 }}</span>
                 <i class="fa-solid fa-gear settings-gear-icon"></i>
             </button>
-
-            <!-- Settings Popover -->
-            <div class="settings-popover" id="settingsPopover">
-                <div class="settings-popover-header">
-                    <div class="settings-popover-avatar" style="background:linear-gradient(135deg, #6366f1, #8b5cf6);">
-                        <i class="fa-solid fa-building" style="font-size:14px;"></i>
-                    </div>
-                    <div class="settings-popover-info">
-                        <div class="settings-popover-name">{{ cliente.nombre|default:request.user.username|truncatechars:25 }}</div>
-                        <div class="settings-popover-role">Portal Institucional</div>
-                    </div>
-                </div>
-                <div class="settings-popover-divider"></div>
-                <a href="{% url 'logout' %}" class="settings-popover-item settings-popover-logout">
-                    <div class="settings-popover-icon" style="background:#fee2e2; color:#ef4444;">
-                        <i class="fa-solid fa-power-off"></i>
-                    </div>
-                    <span>Cerrar Sesión</span>
-                </a>
-            </div>
         </div>
     </aside>
 
+    <!-- Settings Popover FUERA del sidebar (regla crítica: no fixed dentro de overflow:hidden) -->
+    <div class="settings-popover" id="settingsPopover" style="position:fixed; z-index:9999; opacity:0; visibility:hidden; transform:translateY(8px) scale(0.96); transition:opacity 0.25s,transform 0.25s,visibility 0.25s; width:232px; background:rgba(255,255,255,0.98); backdrop-filter:blur(20px); border:1px solid rgba(30,58,138,0.1); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.12),0 4px 16px rgba(59,130,246,0.08); overflow:hidden;">
+        <div class="settings-popover-header">
+            <div class="settings-popover-avatar" style="background:linear-gradient(135deg, #6366f1, #8b5cf6);">
+                <i class="fa-solid fa-building" style="font-size:14px;"></i>
+            </div>
+            <div class="settings-popover-info">
+                <div class="settings-popover-name">{{ cliente.nombre|default:request.user.username|truncatechars:25 }}</div>
+                <div class="settings-popover-role">Portal Institucional</div>
+            </div>
+        </div>
+        <div class="settings-popover-divider"></div>
+        <a href="{% url 'logout' %}" class="settings-popover-item settings-popover-logout">
+            <div class="settings-popover-icon" style="background:#fee2e2; color:#ef4444;">
+                <i class="fa-solid fa-power-off"></i>
+            </div>
+            <span>Cerrar Sesión</span>
+        </a>
+    </div>
+
+    <!-- ═══════ OVERLAY MÓVIL ═══════ -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
+    <!-- ═══════ HAMBURGER BUTTON (solo visible en móvil) ═══════ -->
+    <button class="mobile-hamburger" id="mobileHamburger" onclick="toggleMobileSidebar()" aria-label="Abrir menú">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+
 <script>
+// ═══════ SETTINGS POPOVER — Posicionamiento dinámico ═══════
 function toggleSettingsPopover(e) {
     e.stopPropagation();
     const popover = document.getElementById('settingsPopover');
-    popover.classList.toggle('open');
+    const btn = document.getElementById('sidebarSettingsBtn');
+    const isOpen = popover.classList.contains('open');
+
+    if (isOpen) {
+        popover.classList.remove('open');
+        popover.style.opacity = '0';
+        popover.style.visibility = 'hidden';
+        popover.style.transform = 'translateY(8px) scale(0.96)';
+    } else {
+        const btnRect = btn.getBoundingClientRect();
+        const popoverW = 240;
+        const gap = 8;
+        const MARGIN = 12;
+
+        let left = Math.max(MARGIN, btnRect.left);
+        if (left + popoverW > window.innerWidth - MARGIN) {
+            left = window.innerWidth - popoverW - MARGIN;
+        }
+
+        const spaceAbove = btnRect.top - MARGIN;
+        const spaceBelow = window.innerHeight - btnRect.bottom - MARGIN;
+        const popoverNaturalH = popover.scrollHeight || 200;
+
+        let top, maxH;
+        if (spaceAbove >= Math.min(popoverNaturalH, 200)) {
+            maxH = Math.min(spaceAbove, popoverNaturalH);
+            top = btnRect.top - maxH - gap;
+        } else if (spaceBelow >= 150) {
+            maxH = Math.min(spaceBelow, popoverNaturalH);
+            top = btnRect.bottom + gap;
+        } else {
+            maxH = window.innerHeight - 2 * MARGIN;
+            top = MARGIN;
+        }
+
+        popover.style.left = left + 'px';
+        popover.style.top = top + 'px';
+        popover.style.bottom = 'auto';
+        popover.style.maxHeight = maxH + 'px';
+        popover.style.width = popoverW + 'px';
+        popover.classList.add('open');
+        popover.style.opacity = '1';
+        popover.style.visibility = 'visible';
+        popover.style.transform = 'translateY(0) scale(1)';
+    }
 }
+
 document.addEventListener('click', function(e) {
     const wrap = document.querySelector('.sidebar-settings-wrap');
     const popover = document.getElementById('settingsPopover');
-    if (popover && wrap && !wrap.contains(e.target)) {
+    if (popover && wrap && !wrap.contains(e.target) && !popover.contains(e.target)) {
         popover.classList.remove('open');
+        popover.style.opacity = '0';
+        popover.style.visibility = 'hidden';
+        popover.style.transform = 'translateY(8px) scale(0.96)';
     }
+});
+
+// ═══════ SIDEBAR MÓVIL ═══════
+function toggleMobileSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const hamburger = document.getElementById('mobileHamburger');
+    const isOpen = sidebar.classList.contains('mobile-open');
+    if (isOpen) {
+        closeMobileSidebar();
+    } else {
+        sidebar.classList.add('mobile-open');
+        overlay.classList.add('active');
+        hamburger.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeMobileSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const hamburger = document.getElementById('mobileHamburger');
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+    hamburger.innerHTML = '<i class="fa-solid fa-bars"></i>';
+    document.body.style.overflow = '';
+}
+
+// Cerrar al hacer click en nav-item
+document.querySelectorAll('.nav-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+        if (window.innerWidth <= 768) closeMobileSidebar();
+    });
+});
+
+// Cerrar al rotar a desktop
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) closeMobileSidebar();
 });
 </script>
 
